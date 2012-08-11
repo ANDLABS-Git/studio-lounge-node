@@ -1,6 +1,6 @@
 
 
-##  * hAppy Log *
+##  * hAppy Log *   [![Build Status](https://secure.travis-ci.org/ANDLABS-Git/studio-lounge-node.png)](http://travis-ci.org/ANDLABS-Git/studio-lounge-node)
 
 # Studio-Lounge Server-Node
 
