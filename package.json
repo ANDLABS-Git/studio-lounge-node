@@ -1,0 +1,22 @@
+{
+  "name": "studio-lounge",
+  "author": {
+    "name": "orangeman",
+    "email": "flo@andlabs.eu"
+  },
+  "version": "0.1.1-2",
+  "scripts": {
+    "start": "./server.js"
+  },
+  "dependencies": {
+    "express": "2.5.9",
+    "jade": ">= 0.0.1"
+  },
+  "analyze": false,
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "engines": {
+    "node": "0.6.x"
+  },
+  "subdomain": "happylog"
+}
