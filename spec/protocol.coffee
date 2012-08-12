@@ -13,41 +13,58 @@ the specified behavior is independent of how it implemented.
 
 describe "Game COMMUNICATIONS PROTOCOL Specification v0.1", ->
 
+  describe "Message Types", ->
+
+    it ""
+
   before (test) -> server.start test
   
   xit "should make players smile", -> expect(":-)").to.be.ok
   
-  it "should allow any player to login with anyname", (done) ->
-    (@anyplayer = server.game()).on "connect", () ->
-      @emit 'Hi', "I am Anyname"
-      @on 'Welcome', (msg) ->
-        expect(msg).to.equal 'Logged in as Anyname'
-        done()
-  
-  it "should deny anyone else who is bit unfriendly", (done) ->
-    @troll = server.game().on "connect", () ->
-      @emit 'Hi', "Me too want!!!"
-      @on 'Sorry', (excuse) ->
-        expect(excuse).to.equal 'Kommst nicht rein'
-        done()
-        
-  it "should let lukas post *happy* progress* logs", (done) ->
-    (@lukas = server.game()).on "connect", () ->
-      @emit 'Hi', "I am Lukas"
-      @on 'Welcome', (msg) ->
-        @emit "I am happy today :-)"
-        done()
+  describe "Login", ->
 
-  it "should multiplex happy logs to other players", (done) ->
-    @lukas.send "happy again :-)"
-    @anyplayer.on 'message', (msg) ->
-      expect(msg).to.equal "Lukas:   happy again :-)"
-    @anotherplayer = server.game().on "connect", () ->
-      @emit 'Hi', "I am Ananda"
-      @on 'message', (msg) ->
+    it "should allow any player to login with anyname", (done) ->
+      (@anyplayer = server.game()).on "connect", () ->
+        @emit 'Hi', "I am Anyname"
+        @on 'Welcome', (msg) ->
+          expect(msg).to.equal "Logged in as Anyname"
+          done()
+  
+    it "should deny anyone else who does a wrong login", (done) ->
+      @troll = server.game().on "connect", () ->
+        @emit 'Hi', "I say sth studid"
+        @on 'Sorry', (excuse) ->
+          expect(excuse).to.equal "Try again later..."
+          done()
+   
+    it "should tell players that another player joins the lobby", (done) ->
+      (@anotherplayer = server.game()).on "connect", () -> @emit 'Hi', "I am Ananda"
+      @anyplayer.on 'Join', (msg) -> expect(msg).to.equal "Ananda joined the Lounge"
+      @lukas.on 'Join', (msg) -> expect(msg).to.equal "Ananda joined the Lounge"
+      @troll.on 'Join', (msg) -> expect(True).to.be
+      setTimeout done, 500
+    
+
+  describe "Chat", ->
+
+    it "should let lukas post *happy* progress* logs", (done) ->
+      (@lukas = server.game()).on "connect", () ->
+        @emit 'Hi', "I am Lukas"
+        @on 'Welcome', (msg) ->
+          @emit "I am happy today :-)"
+          done()
+  
+   
+    it "should multiplex happy logs to other players", (done) ->
+      @lukas.send "happy again :-)"
+      @anyplayer.on 'message', (msg) ->
+        expect(msg).to.equal "Lukas:   happy again :-)"
+      @anotherplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
         done()
 
+
+# it "should allow players to send private messages", (done) ->
 
 # it "should bring multiple game players together ", (done) ->
 
