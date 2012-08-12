@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+require("../server").start( function() {
+  console.log("server running");
+});
