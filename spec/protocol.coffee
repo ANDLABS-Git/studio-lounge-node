@@ -3,24 +3,21 @@ expect = require('chai').expect
 io = require 'socket.io-client'
 
 
-###  PROTOCOL SPECIFICATION  *StudioLounge Multiplayer Game*
-                                           RFC 0.0.1 (Draft)
-(in)formal description of digital message formats and rules, 
-for exchanging of theese messages between computing systems,
-defines syntax, semantics, synchronization of communication;
-the specified behavior is independent of how it implemented.
-                                           ~~ wikipedia  ###
+#   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
+#                         v0.1                           (Final)
+#   (in)formal description of digital message formats and rules, 
+#   for exchanging of theese messages between computing systems,
+#   defines syntax, semantics, synchronization of communication;
+#   the specified behavior is independent of how it implemented.
+#                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.1", ->
-
-  describe "Message Types", ->
-
-    it ""
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.1 \n", ->
 
   before (test) -> server.start test
   
-  xit "should make players smile", -> expect(":-)").to.be.ok
-  
+  it "should make developers smile", -> expect(":-)").to.be.ok
+ 
+
   describe "Login", ->
 
     it "should allow any player to login with anyname", (done) ->
@@ -37,13 +34,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.1", ->
           expect(excuse).to.equal "Try again later..."
           done()
    
-    it "should tell players that another player joins the lobby", (done) ->
-      (@anotherplayer = server.game()).on "connect", () -> @emit 'Hi', "I am Ananda"
-      @anyplayer.on 'Join', (msg) -> expect(msg).to.equal "Ananda joined the Lounge"
-      @lukas.on 'Join', (msg) -> expect(msg).to.equal "Ananda joined the Lounge"
-      @troll.on 'Join', (msg) -> expect(True).to.be
-      setTimeout done, 500
-    
+   
 
   describe "Chat", ->
 
@@ -54,6 +45,19 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.1", ->
           @emit "I am happy today :-)"
           done()
   
+     it "should notify avout players joining the lobby", (done) ->
+      (@anotherplayer = server.game()).on "connect", () ->
+        @emit 'Hi', "I am Ananda"
+      notified_players = 0
+      @anyplayer.on 'Joining', (msg) ->
+        notified_players += 1
+        expect(msg).to.equal "Ananda"
+      @lukas.on 'Joining', (msg) ->
+        notified_players += 1
+        expect(msg).to.equal "Ananda"
+      @troll.on 'Joining', (msg) -> expect(true).to.not.be.ok
+      setTimeout ( () ->
+        expect(notified_players).to.equal 2 ; done() ), 1500
    
     it "should multiplex happy logs to other players", (done) ->
       @lukas.send "happy again :-)"
