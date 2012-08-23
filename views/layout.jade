@@ -1,6 +1,10 @@
 !!!
 html
   head
-    title= title
-    link(rel='stylesheet', href='/stylesheets/style.css')
-  body!= body
+    title="ANDLABS StudioLounge Hangout Chat"
+    meta(name="author", content="ANDLABS.eu")
+    meta(name="description", content="A place to post happy logs")
+    link(rel='stylesheet', href='/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/css/style.css')
+  body
+    block content

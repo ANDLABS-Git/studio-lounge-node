@@ -4,7 +4,7 @@
     "name": "orangeman",
     "email": "flo@andlabs.eu"
   },
-  "version": "0.1.1-11",
+  "version": "0.1.1-13",
   "scripts": {
     "start": "node bin/start",
     "test": "./node_modules/mocha/bin/mocha spec --compilers coffee:coffee-script -R spec"

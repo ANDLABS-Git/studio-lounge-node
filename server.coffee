@@ -1,23 +1,21 @@
 
-class Server
+module.exports =
 
   start: (callback) ->
      
-    # express web application
+    # express web application configuration
     @server = (express = require 'express')()
-
-    # configuration
     @server.set 'views', "views"
-    @server.use express.bodyParser()
     @server.set 'view engine', 'jade'
+    @server.use express.bodyParser()
     @server.use express.static 'public'
     @server.set 'view options', { pretty: true }
 
     # html routes
-    @server.get '/', (req, res) -> res.render 'index', {title: "hAppy Log"}
+    @server.get '/', (req, res) -> res.render 'index'
 
     
-    # socket.io messaging protocol
+    # GCP messaging protocol socket.io server implementation
     @io = require('socket.io').listen @server.listen 7777, callback
     
     ChatConversation = []
@@ -46,4 +44,3 @@ class Server
       { 'force new connection': true }
 
 
-module.exports = new Server()  # for testing protocol spec

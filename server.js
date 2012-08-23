@@ -1,21 +1,17 @@
 (function() {
-  var Server;
-  Server = (function() {
-    function Server() {}
-    Server.prototype.start = function(callback) {
+  module.exports = {
+    start: function(callback) {
       var ChatConversation, express;
       this.server = (express = require('express'))();
       this.server.set('views', "views");
-      this.server.use(express.bodyParser());
       this.server.set('view engine', 'jade');
+      this.server.use(express.bodyParser());
       this.server.use(express.static('public'));
       this.server.set('view options', {
         pretty: true
       });
       this.server.get('/', function(req, res) {
-        return res.render('index', {
-          title: "hAppy Log"
-        });
+        return res.render('index');
       });
       this.io = require('socket.io').listen(this.server.listen(7777, callback));
       ChatConversation = [];
@@ -43,17 +39,15 @@
         });
       });
       return this.io.set('log level', 1);
-    };
-    Server.prototype.stop = function(callback) {
+    },
+    stop: function(callback) {
       this.io.server.close();
       return callback();
-    };
-    Server.prototype.game = function() {
+    },
+    game: function() {
       return require('socket.io-client').connect("http://localhost:7777", {
         'force new connection': true
       });
-    };
-    return Server;
-  })();
-  module.exports = new Server();
+    }
+  };
 }).call(this);
