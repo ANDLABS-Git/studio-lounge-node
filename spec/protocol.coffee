@@ -1,71 +1,125 @@
 server = require '../server'
 expect = require('chai').expect
+sinon = require 'sinon'
 io = require 'socket.io-client'
 
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
-#                         v0.1                           (Final)
+#                         v0.2    RFC                    (Draft)
 #   (in)formal description of digital message formats and rules, 
 #   for exchanging of theese messages between computing systems,
 #   defines syntax, semantics, synchronization of communication;
 #   the specified behavior is independent of how it implemented.
 #                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.1 \n", ->
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
 
   before (test) -> server.start test
   
   it "should make developers smile", -> expect(":-)").to.be.ok
- 
 
-  describe "Login", ->
+  describe "LOGIN", ->
 
-    it "should allow any player to login with anyname", (done) ->
-      (@anyplayer = server.game()).on "connect", () ->
-        @emit 'Hi', "I am Anyname"
-        @on 'Welcome', (msg) ->
+    it "should allow any player to login with any name", (done) ->
+      (@anyplayer = server.gcp()).on "connect", () ->
+        @emit 'login', "I am Anyname"
+        @on 'welcome', (msg) ->
           expect(msg).to.equal "Logged in as Anyname"
           done()
   
     it "should deny anyone else who does a wrong login", (done) ->
-      @troll = server.game().on "connect", () ->
-        @emit 'Hi', "I say sth studid"
-        @on 'Sorry', (excuse) ->
-          expect(excuse).to.equal "Try again later..."
+      (@troll = server.gcp()).on "connect", () ->
+        @emit 'login', "I do it wrong ;-P"
+        @on 'sorry', (msg) ->
+          expect(msg).to.equal "Try again later"
           done()
-   
-   
-
-  describe "Chat", ->
-
-    it "should let lukas post *happy* progress* logs", (done) ->
-      (@lukas = server.game()).on "connect", () ->
-        @emit 'Hi', "I am Lukas"
-        @on 'Welcome', (msg) ->
-          @emit "I am happy today :-)"
+ 
+    it "must inform about players that are already online", (done) ->
+      (@anotherplayer = server.gcp()).on "connect", () ->
+        @emit 'login', "I am Ananda"
+        @on 'players', (msg) ->
+          expect(msg).to.deep.equal ["Anyname", "Ananda"]
           done()
+
+    it "should notify about players joining the lobby", (done) ->
+      (@lukas = server.gcp()).on "connect", () ->
+        @emit 'login', "I am Lukas"
+      @anyplayer.on 'login', (msg) => this.happens()
+      @anotherplayer.on 'login', (msg) => this.happens()
+      @troll.on 'login', (msg) -> expect("this").to.not.be.ok
+      setTimeout ( () =>
+        expect(@happens.calledTwice).to.be.ok
+        done() ), 21 # ms responsiveness !!!
   
-     it "should notify avout players joining the lobby", (done) ->
-      (@anotherplayer = server.game()).on "connect", () ->
-        @emit 'Hi', "I am Ananda"
-      notified_players = 0
-      @anyplayer.on 'Joining', (msg) ->
-        notified_players += 1
-        expect(msg).to.equal "Ananda"
-      @lukas.on 'Joining', (msg) ->
-        notified_players += 1
-        expect(msg).to.equal "Ananda"
-      @troll.on 'Joining', (msg) -> expect(true).to.not.be.ok
-      setTimeout ( () ->
-        expect(notified_players).to.equal 2 ; done() ), 1500
    
-    it "should multiplex happy logs to other players", (done) ->
+
+  describe "CHAT", ->
+
+    it "must multiplex chat msgs to all other players", (done) ->
       @lukas.send "happy again :-)"
       @anyplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
       @anotherplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
         done()
+
+    it "must not let players chat who are not logged in", (done) ->
+      server.gcp().on 'connect', () ->
+        @send "I did not log in but I chat anayway"
+      @lukas.on 'message', (msg) -> expect(true).to.be.not.ok
+      setTimeout done, 123
+
+
+  describe "Host Game (5-way) Handshake", () ->
+
+    it "must inform all players about a new hosted game", (done) ->
+      @lukas.emit 'host', { game: "a.sample.game"}
+      @anyplayer.on 'host', (msg) ->
+        expect(msg.game).to.equal "a.sample.game"
+        expect(msg.host).to.equal "Lukas"
+        done()
+
+    it "should tell the host if anyplayer wants to join", (done) ->
+      @anyplayer.emit 'join', { host: "Lukas" }
+      @lukas.on 'join', (msg) ->
+        this.happens()
+        expect(msg.guest).to.equal "Anyname"
+      @anotherplayer.on 'join', (msg) -> expect("this").to.not.exist
+      setTimeout ( () =>
+        expect(@happens.calledOnce).to.be.ok
+        done() ), 123 # ms
+
+    it "should confirm that the host accepted the join", (done) ->
+      @lukas.emit 'confirm', "Anyname"
+      @anyplayer.on 'confirm', (msg) ->
+        expect(msg).to.equal "Lukas"
+        done()
+
+    it "must start the game when all apps are initialized", (done) ->
+      @anyplayer.emit 'ready', { game: "a.sample.game" }
+      @lukas.emit 'ready', { game: "a.sample.game" }
+      @lukas.on 'start', (msg) -> this.happens()
+      @anyplayer.on 'start', (msg) -> this.happens()
+      setTimeout ( () =>
+        expect(@happens.calledTwice).to.be.ok
+        done() ), 21 # ms responsiveness !!!
+
+
+  describe "Game Moves", () ->
+
+    it "should send and receive custom game move messages", (done) ->
+      @anyplayer.emit 'move', {abc: "my", data: 42}
+      @lukas.on 'move', (msg) ->
+        expect(msg.abc).to.equal "my"
+        expect(msg.data).to.equal 42
+        this.happens()
+      @anotherplayer.on 'move', (msg) -> expect("this").to.not.exist
+      setTimeout ( () =>
+        expect(@happens.calledOnce).to.be.ok
+        done() ), 123 # ms
+
+
+
 
 
 # it "should allow players to send private messages", (done) ->
@@ -76,3 +130,4 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.1 \n", ->
 
   after (test) -> server.stop test
 
+  beforeEach () -> @happens = sinon.spy()
