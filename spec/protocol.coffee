@@ -69,6 +69,11 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
       @lukas.on 'message', (msg) -> expect(true).to.be.not.ok
       setTimeout done, 123
 
+# describe "Host Game", () ->
+
+# it "should allow any logged in player to host a new game", (done) ->
+
+# it "should not allow anyone who is not logged in to host a new game", (done) ->
 
   describe "Host Game (5-way) Handshake", () ->
 
@@ -89,13 +94,13 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
         expect(@happens.calledOnce).to.be.ok
         done() ), 123 # ms
 
-    it "should confirm that the host accepted the join", (done) ->
+    it "should confirm that the host accepted the join (ACK)", (done) ->
       @lukas.emit 'confirm', "Anyname"
       @anyplayer.on 'confirm', (msg) ->
         expect(msg).to.equal "Lukas"
         done()
 
-    it "must start the game when all apps are initialized", (done) ->
+    it "must start the game when all participating apps are initialized", (done) ->
       @anyplayer.emit 'ready', { game: "a.sample.game" }
       @lukas.emit 'ready', { game: "a.sample.game" }
       @lukas.on 'start', (msg) -> this.happens()
@@ -107,6 +112,8 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
 
   describe "Game Moves", () ->
 
+# I think this should be split into two and be something like 
+# "should send custom game move messages to 1-n players" for the first case
     it "should send and receive custom game move messages", (done) ->
       @anyplayer.emit 'move', {abc: "my", data: 42}
       @lukas.on 'move', (msg) ->
