@@ -1,8 +1,10 @@
 (function() {
+  var IO;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  IO = 10;
   module.exports = {
     start: function(callback) {
-      var ChatConversation, G, Game, OnlinePlayers, OpenHostedGames, express;
+      var ChatConversation, G, Game, Games, OnlinePlayers, express;
       this.server = (express = require('express'))();
       this.server.set('views', "views");
       this.server.set('view engine', 'jade');
@@ -17,17 +19,42 @@
       this.server.get('/points', function(req, res) {
         return res.render('points');
       });
-      this.io = require('socket.io').listen(this.server.listen(7777, callback));
-      this.io.set('log level', 1);
+      IO = require('socket.io').listen(this.server.listen(7777, callback));
+      IO.set('log level', 1);
+      Games = {};
+      Game = (function() {
+        function Game(host, game) {
+          this.host = host;
+          this.game = game;
+        }
+        Game.prototype.room = function() {
+          return "" + this.host + "-" + this.game;
+        };
+        Game.prototype.emit = function(e, m) {
+          return IO.sockets["in"](this.room()).emit(e, m);
+        };
+        return Game;
+      })();
       ChatConversation = [];
-      this.io.sockets.on('connection', function(player) {
+      IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {
-          var name, _i, _len, _ref;
+          var g, h, name, _i, _len, _ref;
           if (name = (_ref = msg.match(/I am (.+)$/)) != null ? _ref[1] : void 0) {
             this.set('name', name);
             this.emit('welcome', "Logged in as " + name);
             this.emit('players', OnlinePlayers('name'));
-            this.emit('games', OpenHostedGames('name'));
+            this.emit('games', (function() {
+              var _results;
+              _results = [];
+              for (h in Games) {
+                g = Games[h];
+                _results.push(g);
+              }
+              return _results;
+            })());
+            if (g = Games[name]) {
+              this.join(g.room());
+            }
             for (_i = 0, _len = ChatConversation.length; _i < _len; _i++) {
               msg = ChatConversation[_i];
               this.send(msg);
@@ -48,8 +75,11 @@
         });
         player.on('host', function(msg) {
           return this.get('name', function(err, name) {
+            var game;
             if (name) {
-              player.join("" + name + "-" + msg.game);
+              game = new Game(name, msg.game);
+              player.join(game.room());
+              Games[name] = game;
               msg.host = name;
               return player.broadcast.emit('host', msg);
             }
@@ -57,18 +87,20 @@
         });
         player.on('join', function(msg) {
           return this.get('name', function(err, name) {
+            var game;
             if (name) {
-              Game(msg).emit('join', {
+              game = Games[msg.host];
+              player.join(game.room());
+              return game.emit('join', {
                 guest: name
               });
-              return player.join("" + msg.host + "-" + msg.game);
             }
           });
         });
         player.on('start', function(msg) {
           return this.get('name', function(err, name) {
             if (name) {
-              return Game(msg).emit('start');
+              return Games[name].emit('start');
             }
           });
         });
@@ -79,23 +111,20 @@
       });
       G = __bind(function(socket) {
         var obj, room, _ref;
-        return this.io.sockets["in"]((_ref = ((function() {
+        return IO.sockets["in"]((_ref = ((function() {
           var _ref2, _results;
-          _ref2 = this.io.sockets.manager.roomClients[socket.id];
+          _ref2 = IO.sockets.manager.roomClients[socket.id];
           _results = [];
           for (room in _ref2) {
             obj = _ref2[room];
             _results.push(room);
           }
           return _results;
-        }).call(this))[1]) != null ? _ref.slice(1) : void 0);
+        })())[1]) != null ? _ref.slice(1) : void 0);
       }, this);
-      Game = __bind(function(msg) {
-        return this.io.sockets["in"]("" + msg.host + "-" + msg.game);
-      }, this);
-      OnlinePlayers = __bind(function(p) {
+      return OnlinePlayers = __bind(function(p) {
         var i, s, _ref, _results;
-        _ref = this.io.sockets.sockets;
+        _ref = IO.sockets.sockets;
         _results = [];
         for (i in _ref) {
           s = _ref[i];
@@ -105,25 +134,9 @@
         }
         return _results;
       }, this);
-      return OpenHostedGames = __bind(function(p) {
-        var game, host, players, room, _ref, _ref2, _ref3, _results;
-        _ref = this.io.sockets.manager.rooms;
-        _results = [];
-        for (room in _ref) {
-          players = _ref[room];
-          if (room !== '') {
-            _ref3 = (_ref2 = room.slice(1)) != null ? _ref2.split("-") : void 0, host = _ref3[0], game = _ref3[1];
-            _results.push({
-              game: game,
-              host: host
-            });
-          }
-        }
-        return _results;
-      }, this);
     },
     stop: function(callback) {
-      this.io.server.close();
+      IO.server.close();
       return callback();
     },
     gcp: function() {
