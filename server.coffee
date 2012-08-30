@@ -12,7 +12,8 @@ module.exports =
     @server.set 'view options', { pretty: true }
 
     # html routes
-    @server.get '/', (req, res) -> res.render 'index'
+    @server.get '/', (req, res) -> res.render 'points'
+    @server.get '/points', (req, res) -> res.render 'points'
 
     
     # GCP messaging protocol socket.io server implementation
@@ -50,18 +51,17 @@ module.exports =
         @get 'name', (err, name) -> if name
           Game(msg).emit 'start'
       player.on "move", (msg) ->
-        G(player).emit 'move', msg
+        G(player)?.emit? 'move', msg
     G = (socket) =>
-      @io.sockets.in (room for room, obj of @io.sockets.manager.roomClients[socket.id])[1][1..-1]
+      @io.sockets.in (room for room, obj of @io.sockets.manager.roomClients[socket.id])[1]?[1..-1]
     Game = (msg) =>
       @io.sockets.in "#{msg.host}-#{msg.game}"
     OnlinePlayers = (p) =>
-      s.store.data[p] for i, s of @io.sockets.sockets
+      s.store.data[p] for i, s of @io.sockets.sockets when s.store.data[p]
     OpenHostedGames = (p) =>
-      #console.log require("util").inspect(@io.sockets.manager)
       (for room, players of @io.sockets.manager.rooms when room != ''
         #host = @io.sockets.sockets[players[0]].store.data[p]
-        [host, game] = room[1..-1].split "-"
+        [host, game] = room[1..-1]?.split "-"
         { game: game, host: host })
    
 
