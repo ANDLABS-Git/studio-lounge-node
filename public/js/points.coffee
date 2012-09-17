@@ -26,7 +26,7 @@ $(document).ready () ->
     # auto hosting / joining
     @on 'games', (hosted_games) =>
       if hosted_games.length == 0
-        @emit 'host', { game: 'points' }
+        @emit 'host', { game: 'eu.andlabs.gcp.examples.points' }
       else # someone has already hosted
         @emit 'join',  hosted_games[0]
     
