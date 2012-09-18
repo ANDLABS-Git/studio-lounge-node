@@ -1,0 +1,34 @@
+extends layout
+
+block content
+
+  div.navbar.navbar-fixed-top
+    div.navbar-inner
+      div.container-fluid
+        ul.nav.pull-left
+          .brand
+            img(src='img/andlabs.png')
+            *ANDLABS Studios:  GCP-Server Node
+        ul.nav.pull-right
+          li
+            a(href='#')#connected
+
+  #container
+    #send-message.well.span4
+      h2 GCP Chat Demonstration
+      hr
+      label Nick
+      input(type="text", name="name", id='name').span4
+      label Message
+      textarea(rows='6', name="msg", id='msg').span4
+      button#btn-send.btn.btn-primary
+        i.icon-pencil.icon-white
+        | Chat!
+    #messages.well.span4
+      h2 *Studio Lounge* Hangout
+      hr
+      #conversation
+
+  script(src='/socket.io/socket.io.js')
+  script(src='/js/jquery.min.js')
+  script(src='/js/points.js')
