@@ -5,7 +5,7 @@ io = require 'socket.io-client'
 
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
-#                       v0.2.3    RFC                    (Draft)
+#                         v0.3    RFC                    (Draft)
 #   (in)formal description of digital message formats and rules, 
 #   for exchanging of theese messages between computing systems,
 #   defines syntax, semantics, synchronization of communication;
