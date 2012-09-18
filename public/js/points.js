@@ -36,7 +36,7 @@
       this.on('games', __bind(function(hosted_games) {
         if (hosted_games.length === 0) {
           return this.emit('host', {
-            game: 'points'
+            game: 'eu.andlabs.gcp.examples.points'
           });
         } else {
           return this.emit('join', hosted_games[0]);
