@@ -23,9 +23,11 @@ module.exports =
     Games = {}
     class Game
       constructor: (@host, @game) ->
+      players: () -> IO.sockets.clients(@room()).length
       room: () -> "#{@host}-#{@game}"
       emit: (e,m) -> IO.sockets.in(@room()).emit(e,m)
 
+    @server.get '/state', (req, res) -> res.render 'state', {games: Games}
     ChatConversation = []
     IO.sockets.on 'connection', (player) ->
       player.on 'login', (msg) ->  # join lounge

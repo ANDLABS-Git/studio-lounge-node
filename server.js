@@ -27,6 +27,9 @@
           this.host = host;
           this.game = game;
         }
+        Game.prototype.players = function() {
+          return IO.sockets.clients(this.room()).length;
+        };
         Game.prototype.room = function() {
           return "" + this.host + "-" + this.game;
         };
@@ -35,6 +38,11 @@
         };
         return Game;
       })();
+      this.server.get('/state', function(req, res) {
+        return res.render('state', {
+          games: Games
+        });
+      });
       ChatConversation = [];
       IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {

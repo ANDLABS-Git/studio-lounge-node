@@ -34,13 +34,9 @@
         return _results;
       });
       this.on('games', __bind(function(hosted_games) {
-        if (hosted_games.length === 0) {
-          return this.emit('host', {
-            game: 'eu.andlabs.gcp.examples.points'
-          });
-        } else {
-          return this.emit('join', hosted_games[0]);
-        }
+        return this.emit('host', {
+          game: 'eu.andlabs.gcp.examples.points'
+        });
       }, this));
       $(document).mousemove(__bind(function(e) {
         return this.emit('move', {

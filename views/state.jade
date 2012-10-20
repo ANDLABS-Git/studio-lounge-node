@@ -1,0 +1,29 @@
+extends layout
+
+block content
+
+  div.navbar.navbar-fixed-top
+    div.navbar-inner
+      div.container-fluid
+        ul.nav.pull-left
+          .brand
+            img(src='img/andlabs.png')
+            *ANDLABS Studios:  GCP-Server Node
+        ul.nav.pull-right
+          li
+            a(href='#')#connected
+
+  #container
+    #send-message.well.span4
+      h1 GAMES ONLINE:
+      each g,b in games
+        h3 #{g.game}
+        ul
+          li Host: #{g.host}
+          li Players:  #{g.players()} 
+    #messages.well.span4
+      #conversation
+
+  script(src='/socket.io/socket.io.js')
+  script(src='/js/jquery.min.js')
+  script(src='/js/index.js')
