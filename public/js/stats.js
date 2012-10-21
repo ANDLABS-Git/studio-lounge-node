@@ -5,16 +5,16 @@
     return (socket = io.connect()).on("connect", function() {
       var display;
       socket.emit('login', "I am stat bot");
-      this.players = 0;
+      this.players = [];
       this.games = {};
       this.on('players', __bind(function(players) {
-        this.players = players.length;
-        return $("#players").text("ONLINE: " + this.players);
+        this.players = players;
+        return $("#players").text("ONLINE: " + this.players.length);
       }, this));
-      this.on('login', function(msg) {
-        this.players += 1;
-        return $("#players").text("ONLINE: " + this.players);
-      });
+      this.on('login', __bind(function(name) {
+        this.players.push(name);
+        return $("#players").text("ONLINE: " + this.players.length);
+      }, this));
       this.on('games', __bind(function(games) {
         var g, _i, _len;
         for (_i = 0, _len = games.length; _i < _len; _i++) {
@@ -38,7 +38,7 @@
         _results = [];
         for (h in _ref) {
           game = _ref[h];
-          _results.push($("#games").append("<h3>" + game.host + "</h3>                            <ul><li>Host: " + game.game + "</li>                              <li>Players: " + game.players + "</li></ul>"));
+          _results.push($("#games").append("<h3>Host: " + game.host + "</h3>                            <ul><li>" + game.game + "</li>                              <li>Players: " + game.players + "</li></ul>"));
         }
         return _results;
       }, this);

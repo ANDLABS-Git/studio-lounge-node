@@ -1,8 +1,9 @@
 (function() {
-  var createPoint, myColor, points;
+  var createPoint, logged_in, myColor, points;
   var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
   myColor = '#' + (Math.random() * 0xFFFFFF << 0).toString(16);
   points = {};
+  logged_in = false;
   createPoint = function(id, color) {
     $(document.body).append("<div id=\"" + id + "\"> " + id + " </div>");
     return $("#" + id).css({
@@ -15,9 +16,10 @@
   };
   $(document).ready(function() {
     var socket;
-    $("#name").change(function() {
+    $("#login").click(function() {
       $("#conversation").empty();
-      return socket.emit('login', "I am " + $("#name").val());
+      socket.emit('login', "I am " + $("#name").val());
+      return logged_in = true;
     });
     (socket = io.connect()).on("connect", function() {
       var display, sendMsg;
@@ -48,13 +50,15 @@
       }, this));
       this.on('move', function(msg) {
         var _name;
-        points[_name = msg.who] || (points[_name] = createPoint(msg.who, msg.color));
-        return $("#" + msg.who).css({
-          'left': msg.x,
-          'top': msg.y
-        });
+        if (logged_in) {
+          points[_name = msg.who] || (points[_name] = createPoint(msg.who, msg.color));
+          return $("#" + msg.who).css({
+            'left': msg.x,
+            'top': msg.y
+          });
+        }
       });
-      $("#btn-send").click(function() {
+      $("#send").click(function() {
         return sendMsg();
       });
       this.on('message', function(msg) {

@@ -19,11 +19,13 @@ block content
       hr
       label Nick
       input(type="text", name="name", id='name').span4
+      button#login.btn.btn-primary
+        | Login
       label Message
       textarea(rows='6', name="msg", id='msg').span4
-      button#btn-send.btn.btn-primary
+      button#send.btn.btn-primary
         i.icon-pencil.icon-white
-        | Chat!
+        | Chat
     #messages.well.span4
       h2 *Studio Lounge* Hangout
       hr

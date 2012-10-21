@@ -4,6 +4,8 @@ myColor = '#'+(Math.random()*0xFFFFFF<<0).toString(16)
 
 points = {}
 
+logged_in = off
+
 createPoint = (id, color) ->
   $(document.body).append "<div id=\"#{id}\"> #{id} </div>"
   $("#"+id).css
@@ -15,9 +17,10 @@ createPoint = (id, color) ->
 
 $(document).ready () ->
 
-  $("#name").change () ->
+  $("#login").click () ->
     $("#conversation").empty()
     socket.emit 'login', "I am " + $("#name").val()
+    logged_in = on
 
   (socket = io.connect()).on "connect", () ->
     @on 'login', (msg) -> display msg + " joined"
@@ -39,11 +42,12 @@ $(document).ready () ->
         y: e.pageY-42
     
     @on 'move', (msg) ->
-      points[msg.who] ||= createPoint(msg.who, msg.color)
-      $("#"+msg.who).css { 'left': msg.x, 'top': msg.y }
+      if logged_in
+        points[msg.who] ||= createPoint(msg.who, msg.color)
+        $("#"+msg.who).css { 'left': msg.x, 'top': msg.y }
 
     # chat
-    $("#btn-send").click () -> sendMsg()
+    $("#send").click () -> sendMsg()
     @on 'message', (msg) -> display(msg)
 
     display = (msg) ->

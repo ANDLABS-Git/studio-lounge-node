@@ -3,16 +3,16 @@ $(document).ready () ->
   (socket = io.connect()).on "connect", () ->
     socket.emit 'login', "I am stat bot"
     
-    @players = 0
+    @players = []
     @games = {}
 
     @on 'players', (players) =>
-      @players = players.length
-      $("#players").text("ONLINE: "+@players)
+      @players = players
+      $("#players").text("ONLINE: "+@players.length)
     
-    @on 'login', (msg) ->
-      @players += 1
-      $("#players").text("ONLINE: "+@players)
+    @on 'login', (name) =>
+      @players.push name
+      $("#players").text("ONLINE: "+@players.length)
 
     @on 'games', (games) =>
       @games[g.host] = g for g in games
@@ -29,6 +29,6 @@ $(document).ready () ->
     display = () =>
       $("#games").empty()
       for h,game of @games
-        $("#games").append("<h3>#{game.host}</h3>
-                            <ul><li>Host: #{game.game}</li>
+        $("#games").append("<h3>Host: #{game.host}</h3>
+                            <ul><li>#{game.game}</li>
                               <li>Players: #{game.players}</li></ul>")
