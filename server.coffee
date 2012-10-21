@@ -14,6 +14,7 @@ module.exports =
     # html routes
     @server.get '/', (req, res) -> res.render 'points'
     @server.get '/points', (req, res) -> res.render 'points'
+    @server.get '/stats', (req, res) -> res.render 'stats', {games: Games}
 
     
     # GCP messaging protocol socket.io server implementation
@@ -23,11 +24,10 @@ module.exports =
     Games = {}
     class Game
       constructor: (@host, @game) ->
-      players: () -> IO.sockets.clients(@room()).length
+      player_cnt: () -> IO.sockets.clients(@room()).length
       room: () -> "#{@host}-#{@game}"
       emit: (e,m) -> IO.sockets.in(@room()).emit(e,m)
 
-    @server.get '/state', (req, res) -> res.render 'state', {games: Games}
     ChatConversation = []
     IO.sockets.on 'connection', (player) ->
       player.on 'login', (msg) ->  # join lounge
@@ -35,7 +35,7 @@ module.exports =
           @set 'name', name # player logged in
           @emit 'welcome', "Logged in as "+name
           @emit 'players', OnlinePlayers 'name'
-          @emit 'games', (g for h,g of Games)
+          @emit 'games', ((g.players = g.player_cnt(); g) for h,g of Games)
           @join g.room() if g = Games[name]
           @send msg for msg in ChatConversation
           player.broadcast.emit 'login', name
@@ -52,12 +52,13 @@ module.exports =
           player.join game.room()
           Games[name] = game
           msg.host = name
+          msg.players = game.player_cnt()
           player.broadcast.emit 'host', msg
       player.on 'join', (msg) ->
         @get 'name', (err, name) -> if name
           game = Games[msg.host]
           player.join game.room()
-          game.emit 'join', {guest: name}
+          player.broadcast.emit 'join', {guest: name, game: game.game}
       player.on 'start', (msg) ->
         @get 'name', (err, name) -> if name
           Games[name].emit 'start'

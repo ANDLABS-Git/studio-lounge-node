@@ -19,6 +19,11 @@
       this.server.get('/points', function(req, res) {
         return res.render('points');
       });
+      this.server.get('/stats', function(req, res) {
+        return res.render('stats', {
+          games: Games
+        });
+      });
       IO = require('socket.io').listen(this.server.listen(7777, callback));
       IO.set('log level', 1);
       Games = {};
@@ -27,7 +32,7 @@
           this.host = host;
           this.game = game;
         }
-        Game.prototype.players = function() {
+        Game.prototype.player_cnt = function() {
           return IO.sockets.clients(this.room()).length;
         };
         Game.prototype.room = function() {
@@ -38,11 +43,6 @@
         };
         return Game;
       })();
-      this.server.get('/state', function(req, res) {
-        return res.render('state', {
-          games: Games
-        });
-      });
       ChatConversation = [];
       IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {
@@ -56,7 +56,7 @@
               _results = [];
               for (h in Games) {
                 g = Games[h];
-                _results.push(g);
+                _results.push((g.players = g.player_cnt(), g));
               }
               return _results;
             })());
@@ -89,6 +89,7 @@
               player.join(game.room());
               Games[name] = game;
               msg.host = name;
+              msg.players = game.player_cnt();
               return player.broadcast.emit('host', msg);
             }
           });
@@ -99,8 +100,9 @@
             if (name) {
               game = Games[msg.host];
               player.join(game.room());
-              return game.emit('join', {
-                guest: name
+              return player.broadcast.emit('join', {
+                guest: name,
+                game: game.game
               });
             }
           });

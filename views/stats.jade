@@ -15,15 +15,13 @@ block content
 
   #container
     #send-message.well.span4
-      h1 GAMES ONLINE:
-      each g,b in games
-        h3 #{g.game}
-        ul
-          li Host: #{g.host}
-          li Players:  #{g.players()} 
+      h1#players ONLINE: 0
+      #games
+        h1 GAMES ONLINE:
+    
     #messages.well.span4
       #conversation
 
   script(src='/socket.io/socket.io.js')
   script(src='/js/jquery.min.js')
-  script(src='/js/index.js')
+  script(src='/js/stats.js')
