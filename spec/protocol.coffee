@@ -12,7 +12,7 @@ io = require 'socket.io-client'
 #   the specified behavior is independent of how it implemented.
 #                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   before (test) -> server.start test
   
@@ -38,11 +38,9 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
     it "must inform about players that are already online", (done) ->
       (@anotherplayer = server.gcp()).on "connect", () ->
         @emit 'login', "I am Ananda"
-        @on 'players', (msg) ->
-          expect(msg).to.deep.equal ["Anyname", "Ananda"]
-          done()
+        done()
 
-    it "should notify about players joining the lobby", (done) ->
+    it "should notify about players that log in", (done) ->
       (@lukas = server.gcp()).on "connect", () ->
         @emit 'login', "I am Lukas"
       @anyplayer.on 'login', (msg) => this.happens()
@@ -52,7 +50,11 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
         expect(@happens.calledTwice).to.be.ok
         done() ), 21 # ms responsiveness !!!  
 
-
+    it "should notify about players that log out", (done) ->
+      @anyplayer.send 'logout'
+      @anotherplayer.on 'logout', (msg) ->
+        expect(msg).to.equal "Anyname"
+        done()
 
   describe "CHATTING", ->
 
@@ -75,7 +77,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
   describe "HOSTING GAMES", () ->
 
     it "should allow any logged in player to host a game", (done) ->
-      @anyplayer.emit 'host', { game: "my.game"}
+      @anyplayer.emit 'host', { game: "my.game", max: 2}
       @lukas.on 'host', (msg) ->
         expect(msg.game).to.equal "my.game"
         expect(msg.host).to.equal "Anyname"
@@ -87,12 +89,19 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
       setTimeout done, 58
  
     it "must inform about open hosted games that are already online", (done) ->
-      (@yetanotherplayer = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Yet Another new Player"
-        @on 'games', (msg) ->
-          expect(msg[0].game).to.deep.equal "my.game"
-          expect(msg[0].host).to.deep.equal "Anyname"
-          done()
+      @lukas.send 'state'
+      @lukas.on 'state', (msg) ->
+        expect(msg).to.deep.equal( {
+          players: [  { player:  "Anyname",
+                        game:    "my.game",
+                        joined:  1,
+                        max:     2 },
+                      { player: "Lukas" },
+                      { player: "Ananda"  } ],
+          chat: [ { player: "Lukas", msg: "happy again :-)" } ],
+          games_played: 0,
+          msges_send: 42
+        })
 
     it "should tell any host what other players want to join", (done) ->
       @anotherplayer.emit 'join', { host: "Anyname", game: "my.game" }
