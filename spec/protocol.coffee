@@ -5,7 +5,7 @@ io = require 'socket.io-client'
 
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
-#                         v0.3    RFC                    (Draft)
+#                         v0.3                           (final)
 #   (in)formal description of digital message formats and rules, 
 #   for exchanging of theese messages between computing systems,
 #   defines syntax, semantics, synchronization of communication;
@@ -35,30 +35,20 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           expect(msg).to.equal "Try again later"
           done()
 
-    it "must inform about players that are already online", (done) ->
-      (@anotherplayer = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Ananda"
-        done()
-
-    it "should notify about players that log in", (done) ->
-      (@lukas = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Lukas"
+    it "should notify everyone about players that log in", (done) ->
+      (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
+      (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
       @anyplayer.on 'login', (msg) => this.happens()
-      @anotherplayer.on 'login', (msg) => this.happens()
       @troll.on 'login', (msg) -> expect("this").to.not.be.ok
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 21 # ms responsiveness !!!  
 
-    it "should notify about players that log out", (done) ->
-      @anyplayer.send 'logout'
-      @anotherplayer.on 'logout', (msg) ->
-        expect(msg).to.equal "Anyname"
-        done()
+
 
   describe "CHATTING", ->
 
-    it "must multiplex chat msgs to all other players", (done) ->
+    it "must multiplex up to 42 existing chat msgs", (done) ->
       @lukas.send "happy again :-)"
       @anyplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
@@ -76,7 +66,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   describe "HOSTING GAMES", () ->
 
-    it "should allow any logged in player to host a game", (done) ->
+    it "should allow any logged in player to host games", (done) ->
       @anyplayer.emit 'host', { game: "my.game", max: 2}
       @lukas.on 'host', (msg) ->
         expect(msg.game).to.equal "my.game"
@@ -88,16 +78,20 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anotherplayer.on 'host', (msg) -> expect("that").to.be.not.ok
       setTimeout done, 58
  
-    it "must inform about open hosted games that are already online", (done) ->
+    it "should inform about everything upon request", (done) ->
       @lukas.send 'state'
       @lukas.on 'state', (msg) ->
         expect(msg).to.deep.equal( {
-          players: [  { player:  "Anyname",
-                        game:    "my.game",
-                        joined:  1,
-                        max:     2 },
-                      { player: "Lukas" },
-                      { player: "Ananda"  } ],
+          players: [
+            {
+              player:  "Anyname"
+              game:    "my.game"
+              joined:  1
+              max:     2
+            },
+            { player: "Lukas" },
+            { player: "Ananda"  }
+          ],
           chat: [ { player: "Lukas", msg: "happy again :-)" } ],
           games_played: 0,
           msges_send: 42
@@ -134,6 +128,16 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms
+
+
+
+  describe "LOGOUT", () ->
+
+    it "should notify about players that log out", (done) ->
+      @anyplayer.send 'logout'
+      @anotherplayer.on 'logout', (msg) ->
+        expect(msg).to.equal "Anyname"
+        done()
 
 
 
