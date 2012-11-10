@@ -69,7 +69,10 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
     it "should allow any logged in player to host games", (done) ->
       @anyplayer.emit 'host', { game: "my.game", max: 2}
       @lukas.on 'host', (msg) ->
-        expect(msg.game).to.equal "my.game"
+        expect(msg.game).to.equal "my.game-1234567" # regex test
+        expect(msg.host).to.equal "Anyname"
+      @anyplayer.on 'host', (msg) ->
+        expect(msg.game).to.equal "my.game-1234567" # regex test
         expect(msg.host).to.equal "Anyname"
         done()
 
@@ -85,7 +88,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           players: [
             {
               player:  "Anyname"
-              game:    "my.game"
+              game:    "my.game-12345" # regex test
               joined:  1
               max:     2
             },
@@ -98,9 +101,9 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         })
 
     it "should tell any host what other players want to join", (done) ->
-      @anotherplayer.emit 'join', { host: "Anyname", game: "my.game" }
+      @anotherplayer.emit 'join', { game: "my.game-12345" } # regex
       @lukas.emit 'join', { host: "Anyname", game: "my.game" }
-      @anyplayer.on 'join', (msg) => this.happens()
+      @anyplayer.on 'join', (msg) => this.happens() # expect game instance id
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
