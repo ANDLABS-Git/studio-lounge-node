@@ -71,9 +71,11 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @lukas.on 'host', (msg) ->
         expect(msg.game).to.equal "my.game-1234567" # regex test
         expect(msg.host).to.equal "Anyname"
+        expect(msg.max).to.equal 2
       @anyplayer.on 'host', (msg) ->
         expect(msg.game).to.equal "my.game-1234567" # regex test
         expect(msg.host).to.equal "Anyname"
+        expect(msg.max).to.equal 2
         done()
 
     it "should deny anyone else to host a new game", (done) ->
@@ -89,10 +91,10 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
             {
               player:  "Anyname"
               games: [
-                { 
-                  game: "my.game-12345" # regex test
+                {
+                  game: "my.game-12345" # TODO regex test
                   joined:  1
-                  max:     2 
+                  max:     2
                 } # more games ...
               ]
             },
@@ -105,11 +107,12 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         })
 
     it "should tell any host what other players want to join", (done) ->
-      @anotherplayer.emit 'join', { game: "my.game-12345" } # regex
-      @lukas.emit 'join', { host: "Anyname", game: "my.game" }
+      @anotherplayer.emit 'join', { game: "my.game-12345" } # TODO regex
+      @lukas.emit 'join', { game: "my.game-12345" }
+      @anotherplayer.on 'join', (msg) => this.happens() # expect game instance id
       @anyplayer.on 'join', (msg) => this.happens() # expect game instance id
       setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
+        expect(@happens.calledTwice).to.be.ok #TODO called three times
         done() ), 42 # ms responsiveness !!!
 
 
