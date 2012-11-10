@@ -88,9 +88,13 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           players: [
             {
               player:  "Anyname"
-              game:    "my.game-12345" # regex test
-              joined:  1
-              max:     2
+              games: [
+                { 
+                  game: "my.game-12345" # regex test
+                  joined:  1
+                  max:     2 
+                } # more games ...
+              ]
             },
             { player: "Lukas" },
             { player: "Ananda"  }
@@ -104,14 +108,6 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anotherplayer.emit 'join', { game: "my.game-12345" } # regex
       @lukas.emit 'join', { host: "Anyname", game: "my.game" }
       @anyplayer.on 'join', (msg) => this.happens() # expect game instance id
-      setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
-        done() ), 42 # ms responsiveness !!!
-
-    it "should acknowledge to all participants that the game starts", (done) ->
-      @anyplayer.emit 'start', { host: "Anyname", game: "my.game" }
-      @anotherplayer.on 'start', (msg) => this.happens()
-      @lukas.on 'start', (msg) => this.happens()
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
