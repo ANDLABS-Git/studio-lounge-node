@@ -48,7 +48,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   describe "CHATTING", ->
 
-    it "must multiplex up to 42 existing chat msgs", (done) ->
+    it "must allow players to chat in the public chatroom", (done) ->
       @lukas.send "happy again :-)"
       @anyplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
