@@ -2,7 +2,7 @@ server = require '../server'
 expect = require('chai').expect
 sinon = require 'sinon'
 io = require 'socket.io-client'
-
+GameInstanceID = ""
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
 #                         v0.3                           (final)
@@ -76,7 +76,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
         expect(msg.max).to.equal 2
-        @gameInstanceID = msg.game
+        GameInstanceID = msg.game
         done()
 
     it "should deny anyone else to host a new game", (done) ->
@@ -93,7 +93,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
               player:  "Anyname"
               games: [
                 {
-                  game: @anyplayer.gameInstanceID
+                  game: GameInstanceID
                   joined:  1
                   min:     2
                   max:     3
@@ -113,10 +113,10 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
       @anotherplayer.on 'join', (msg) =>
         this.happens()
-        expect(msg.game).to.equal @anyplayer.gameInstanceID
+        expect(msg.game).to.equal GameInstanceID
       @anyplayer.on 'join', (msg) =>
         this.happens()
-        expect(msg.game).to.equal @anyplayer.gameInstanceID
+        expect(msg.game).to.equal GameInstanceID
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
@@ -126,11 +126,11 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anyplayer.on "unhost", (msg) =>
         this.happens()
         expect(msg.host).to.equal "Anyname"
-        expect(msg.game).to.equal @anyplayer.gameInstanceID
+        expect(msg.game).to.equal GameInstanceID
       @anotherplayer.on "unhost", (msg) =>
         this.happens()
         expect(msg.host).to.equal "Anyname"
-        expect(msg.game).to.equal @anyplayer.gameInstanceID
+        expect(msg.game).to.equal GameInstanceID
 
 
 
@@ -157,7 +157,6 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anotherplayer.on 'logout', (msg) ->
         expect(msg).to.equal "Anyname"
         done()
-
 
 
 
