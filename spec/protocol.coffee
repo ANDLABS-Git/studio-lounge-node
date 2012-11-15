@@ -67,12 +67,12 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
   describe "HOSTING GAMES", () ->
 
     it "should allow any logged in player to host games", (done) ->
-      @anyplayer.emit 'host', { game: "my.game", max: 2}
+      @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
       @lukas.on 'host', (msg) ->
         expect(msg.game).to.equal "my.game-1234567" # regex test
         expect(msg.host).to.equal "Anyname"
         expect(msg.max).to.equal 2
-      @anyplayer.on 'host', (msg) ->
+      @anyplayer.on 'host', (msg) ->   # host gets the msg too 
         expect(msg.game).to.equal "my.game-1234567" # regex test
         expect(msg.host).to.equal "Anyname"
         expect(msg.max).to.equal 2
@@ -94,7 +94,8 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
                 {
                   game: "my.game-12345" # TODO regex test
                   joined:  1
-                  max:     2
+                  min:     2
+                  max:     3
                 } # more games ...
               ]
             },
@@ -106,7 +107,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           msges_send: 42
         })
 
-    it "should tell any host what other players want to join", (done) ->
+    it "should tell the coplayers when another player joins", (done) ->
       @anotherplayer.emit 'join', { game: "my.game-12345" } # TODO regex
       @lukas.emit 'join', { game: "my.game-12345" }
       @anotherplayer.on 'join', (msg) => this.happens() # expect game instance id
