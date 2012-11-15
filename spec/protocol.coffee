@@ -121,7 +121,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
 
-    it "should automatically unhost games when min players have joined" , (done) ->
+    it "should alow a server to unhost games (e.g. when full)" , (done) ->
       @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
       @anyplayer.on "unhost", (msg) =>
         this.happens()
