@@ -71,11 +71,13 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @lukas.on 'host', (msg) ->
         expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
-        expect(msg.max).to.equal 2
+        expect(msg.min).to.equal 2
+        expect(msg.max).to.equal 3
       @anyplayer.on 'host', (msg) ->   # host gets the msg too 
         expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
-        expect(msg.max).to.equal 2
+        expect(msg.min).to.equal 2
+        expect(msg.max).to.equal 3
         GameInstanceID = msg.game
         done()
 
