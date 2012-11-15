@@ -109,7 +109,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         })
 
     it "should tell all co-players when another player joins", (done) ->
-      @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID } # TODO regex
+      @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID }
       @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
       @anotherplayer.on 'join', (msg) =>
         this.happens()
@@ -120,6 +120,17 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
+
+    it "should automatically unhost games when min players have joined" , (done) ->
+      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+      @anyplayer.on "unhost", (msg) =>
+        this.happens()
+        expect(msg.host).to.equal "Anyname"
+        expect(msg.game).to.equal @anyplayer.gameInstanceID
+      @anotherplayer.on "unhost", (msg) =>
+        this.happens()
+        expect(msg.host).to.equal "Anyname"
+        expect(msg.game).to.equal @anyplayer.gameInstanceID
 
 
 
