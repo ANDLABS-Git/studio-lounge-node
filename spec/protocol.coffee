@@ -69,13 +69,14 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
     it "should allow any logged in player to host games", (done) ->
       @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
       @lukas.on 'host', (msg) ->
-        expect(msg.game).to.equal "my.game-1234567" # regex test
+        expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
         expect(msg.max).to.equal 2
       @anyplayer.on 'host', (msg) ->   # host gets the msg too 
-        expect(msg.game).to.equal "my.game-1234567" # regex test
+        expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
         expect(msg.max).to.equal 2
+        @gameInstanceID = msg.game
         done()
 
     it "should deny anyone else to host a new game", (done) ->
@@ -92,11 +93,11 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
               player:  "Anyname"
               games: [
                 {
-                  game: "my.game-12345" # TODO regex test
+                  game: @anyplayer.gameInstanceID
                   joined:  1
                   min:     2
                   max:     3
-                } # more games ...
+                }
               ]
             },
             { player: "Lukas" },
@@ -107,13 +108,17 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           msges_send: 42
         })
 
-    it "should tell the coplayers when another player joins", (done) ->
-      @anotherplayer.emit 'join', { game: "my.game-12345" } # TODO regex
-      @lukas.emit 'join', { game: "my.game-12345" }
-      @anotherplayer.on 'join', (msg) => this.happens() # expect game instance id
-      @anyplayer.on 'join', (msg) => this.happens() # expect game instance id
+    it "should tell all co-players when another player joins", (done) ->
+      @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID } # TODO regex
+      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+      @anotherplayer.on 'join', (msg) =>
+        this.happens()
+        expect(msg.game).to.equal @anyplayer.gameInstanceID
+      @anyplayer.on 'join', (msg) =>
+        this.happens()
+        expect(msg.game).to.equal @anyplayer.gameInstanceID
       setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok #TODO called three times
+        expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
 
 
