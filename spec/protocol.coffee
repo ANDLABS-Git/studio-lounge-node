@@ -108,7 +108,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           msges_send: 42
         })
 
-    it "should tell all co-players when another player joins", (done) ->
+    it "should tell all players when another player joins", (done) ->
       @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID }
       @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
       @anotherplayer.on 'join', (msg) =>
