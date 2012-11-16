@@ -2,17 +2,17 @@ server = require '../server'
 expect = require('chai').expect
 sinon = require 'sinon'
 io = require 'socket.io-client'
-
+GameInstanceID = ""
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
-#                       v0.2.3    RFC                    (Draft)
+#                         v0.3                           (final)
 #   (in)formal description of digital message formats and rules, 
 #   for exchanging of theese messages between computing systems,
 #   defines syntax, semantics, synchronization of communication;
 #   the specified behavior is independent of how it implemented.
 #                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   before (test) -> server.start test
   
@@ -35,18 +35,10 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
           expect(msg).to.equal "Try again later"
           done()
 
-    it "must inform about players that are already online", (done) ->
-      (@anotherplayer = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Ananda"
-        @on 'players', (msg) ->
-          expect(msg).to.deep.equal ["Anyname", "Ananda"]
-          done()
-
-    it "should notify about players joining the lobby", (done) ->
-      (@lukas = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Lukas"
+    it "should notify everyone about players that log in", (done) ->
+      (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
+      (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
       @anyplayer.on 'login', (msg) => this.happens()
-      @anotherplayer.on 'login', (msg) => this.happens()
       @troll.on 'login', (msg) -> expect("this").to.not.be.ok
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
@@ -56,7 +48,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
 
   describe "CHATTING", ->
 
-    it "must multiplex chat msgs to all other players", (done) ->
+    it "must allow players to chat in the public chatroom", (done) ->
       @lukas.send "happy again :-)"
       @anyplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
@@ -74,11 +66,19 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
 
   describe "HOSTING GAMES", () ->
 
-    it "should allow any logged in player to host a game", (done) ->
-      @anyplayer.emit 'host', { game: "my.game"}
+    it "should allow any logged in player to host games", (done) ->
+      @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
       @lukas.on 'host', (msg) ->
-        expect(msg.game).to.equal "my.game"
+        expect(msg.game).to.match /my\.game-.+/
         expect(msg.host).to.equal "Anyname"
+        expect(msg.min).to.equal 2
+        expect(msg.max).to.equal 3
+      @anyplayer.on 'host', (msg) ->   # host gets the msg too 
+        expect(msg.game).to.match /my\.game-.+/
+        expect(msg.host).to.equal "Anyname"
+        expect(msg.min).to.equal 2
+        expect(msg.max).to.equal 3
+        GameInstanceID = msg.game
         done()
 
     it "should deny anyone else to host a new game", (done) ->
@@ -86,29 +86,61 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
       @anotherplayer.on 'host', (msg) -> expect("that").to.be.not.ok
       setTimeout done, 58
  
-    it "must inform about open hosted games that are already online", (done) ->
-      (@yetanotherplayer = server.gcp()).on "connect", () ->
-        @emit 'login', "I am Yet Another new Player"
-        @on 'games', (msg) ->
-          expect(msg[0].game).to.deep.equal "my.game"
-          expect(msg[0].host).to.deep.equal "Anyname"
-          done()
+    it "should inform about everything upon request", (done) ->
+      @lukas.send 'state'
+      @lukas.on 'state', (msg) ->
+        expect(msg).to.deep.equal( {
+          players: [
+            {
+              name:  "Anyname"
+              game: { # hosted
+                game: GameInstanceID
+                joined:  1
+                min:     2
+                max:     3
+              }
+            },
+            { player: "Lukas" },
+            { player: "Ananda"  }
+          ],
+          chat: [ { player: "Lukas", msg: "happy again :-)" } ],
+          games_played: 0,
+          msges_send: 42
+        })
 
-    it "should tell any host what other players want to join", (done) ->
-      @anotherplayer.emit 'join', { host: "Anyname", game: "my.game" }
-      @lukas.emit 'join', { host: "Anyname", game: "my.game" }
-      @anyplayer.on 'join', (msg) => this.happens()
+    it "should tell all players when another player joins", (done) ->
+      @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID }
+      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+      @anotherplayer.on 'join', (msg) =>
+        this.happens()
+        expect(msg.game).to.equal GameInstanceID
+      @anyplayer.on 'join', (msg) =>
+        this.happens()
+        expect(msg.game).to.equal GameInstanceID
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
 
-    it "should acknowledge to all participants that the game starts", (done) ->
-      @anyplayer.emit 'start', { host: "Anyname", game: "my.game" }
-      @anotherplayer.on 'start', (msg) => this.happens()
-      @lukas.on 'start', (msg) => this.happens()
-      setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
-        done() ), 42 # ms responsiveness !!!
+    it "should alow a server to unhost games (e.g. when full)" , (done) ->
+      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+      @anyplayer.on "unhost", (msg) =>
+        this.happens()
+        expect(msg.host).to.equal "Anyname"
+        expect(msg.game).to.equal GameInstanceID
+      @anotherplayer.on "unhost", (msg) =>
+        this.happens()
+        expect(msg.host).to.equal "Anyname"
+        expect(msg.game).to.equal GameInstanceID
+      @lukas.send 'state'
+      @lukas.on 'state', (msg) ->
+        expect(msg).to.deep.equal( {
+
+    it "may inform about active games (for debugging)", (done) ->
+      @lukas.send 'games'
+      @lukas.on 'games', (msg) ->
+        expect(msg.players[0].name).to.equal "Anyname"
+        expect(msg.players[0].game).to.equal undefined # not hosted anymore because it is already 'full'
+        done()
 
 
 
@@ -126,6 +158,15 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.2 \n", ->
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms
 
+
+
+  describe "LOGOUT", () ->
+
+    it "should notify about players that log out", (done) ->
+      @anyplayer.send 'logout'
+      @anotherplayer.on 'logout', (msg) ->
+        expect(msg).to.equal "Anyname"
+        done()
 
 
 
