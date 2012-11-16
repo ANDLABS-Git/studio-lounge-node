@@ -25,7 +25,7 @@ module.exports =
     class Game
       constructor: (@host, @game) ->
       player_cnt: () -> IO.sockets.clients(@room()).length
-      room: () -> "#{@host}-#{@game}"
+      room: () -> "#{@host}-#{@game}-a23"
       emit: (e,m) -> IO.sockets.in(@room()).emit(e,m)
 
     ChatConversation = []
@@ -54,21 +54,21 @@ module.exports =
           msg.host = name
           msg.players = game.player_cnt()
           player.broadcast.emit 'host', msg
+      player.on 'state', (msg) ->
+        @emit State()
       player.on 'join', (msg) ->
         @get 'name', (err, name) -> if name
           game = Games[msg.host]
           player.join game.room()
           player.broadcast.emit 'join', {guest: name, game: game.game}
-      player.on 'start', (msg) ->
-        @get 'name', (err, name) -> if name
-          Games[name].emit 'start'
       player.on "move", (msg) ->
         G(player)?.emit? 'move', msg
     G = (socket) =>
       IO.sockets.in (room for room, obj of IO.sockets.manager.roomClients[socket.id])[1]?[1..-1]
     OnlinePlayers = (p) =>
       s.store.data[p] for i, s of IO.sockets.sockets when s.store.data[p]
-   
+    State = () ->
+      ({player: player, games: games} for player, games of Games)
 
 
   stop: (callback) -> IO.server.close(); callback()
