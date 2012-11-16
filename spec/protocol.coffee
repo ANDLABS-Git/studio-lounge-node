@@ -87,30 +87,30 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       setTimeout done, 58
  
     it "should inform about everything upon request", (done) ->
-      @lukas.send 'state'
+      @lukas.emit 'state'
       @lukas.on 'state', (msg) ->
         expect(msg).to.deep.equal( {
           players: [
             {
               name:  "Anyname"
               game: { # hosted
-                game: GameInstanceID
-                joined:  1
+                id: GameInstanceID
                 min:     2
                 max:     3
+                joined:  1
               }
             },
-            { player: "Lukas" },
-            { player: "Ananda"  }
+            { name: "Lukas" },
+            { name: "Ananda"  }
           ],
           chat: [ { player: "Lukas", msg: "happy again :-)" } ],
-          games_played: 0,
-          msges_send: 42
+          games_played: 1,
+          msges_sent: 1
         })
+        done()
 
     it "should tell all players when another player joins", (done) ->
-      @anotherplayer.emit 'join', { game: @anyplayer.gameInstanceID }
-      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+      @anotherplayer.emit 'join', { game: GameInstanceID }
       @anotherplayer.on 'join', (msg) =>
         this.happens()
         expect(msg.game).to.equal GameInstanceID
@@ -121,25 +121,28 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms responsiveness !!!
 
-    it "should alow a server to unhost games (e.g. when full)" , (done) ->
-      @lukas.emit 'join', { game: @anyplayer.gameInstanceID }
+    it "should allow a server to unhost games (e.g. when full)" , (done) ->
+      @lukas.emit 'join', { game: GameInstanceID }
       @anyplayer.on "unhost", (msg) =>
-        this.happens()
         expect(msg.host).to.equal "Anyname"
         expect(msg.game).to.equal GameInstanceID
       @anotherplayer.on "unhost", (msg) =>
-        this.happens()
         expect(msg.host).to.equal "Anyname"
         expect(msg.game).to.equal GameInstanceID
-      @lukas.send 'state'
-      @lukas.on 'state', (msg) ->
-        expect(msg).to.deep.equal( {
+        @anotherplayer.emit 'state'
+        @anotherplayer.on 'state', (msg) -> # not hosted anymore because it is already 'full'
+          expect(msg.players[0].game).to.equal undefined
+          done()
 
     it "may inform about active games (for debugging)", (done) ->
-      @lukas.send 'games'
+      @lukas.emit 'games'
       @lukas.on 'games', (msg) ->
-        expect(msg.players[0].name).to.equal "Anyname"
-        expect(msg.players[0].game).to.equal undefined # not hosted anymore because it is already 'full'
+        expect(msg).to.deep.equal( [
+          {
+            game: GameInstanceID,
+            players: ["Anyname", "Ananda", "Lukas"]
+          }
+        ] )
         done()
 
 
@@ -153,7 +156,6 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(msg.abc).to.equal "my"
         expect(msg.data).to.equal 42
         this.happens()
-      @yetanotherplayer.on 'move', (msg) -> expect("this").to.not.exist
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok
         done() ), 42 # ms
@@ -163,7 +165,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
   describe "LOGOUT", () ->
 
     it "should notify about players that log out", (done) ->
-      @anyplayer.send 'logout'
+      @anyplayer.emit 'logout'
       @anotherplayer.on 'logout', (msg) ->
         expect(msg).to.equal "Anyname"
         done()

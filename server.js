@@ -4,7 +4,7 @@
   IO = 10;
   module.exports = {
     start: function(callback) {
-      var ChatConversation, G, Game, Games, OnlinePlayers, express;
+      var ChatConversation, G, Game, Games, Hosted, OnlinePlayers, State, express;
       this.server = (express = require('express'))();
       this.server.set('views', "views");
       this.server.set('view engine', 'jade');
@@ -27,40 +27,31 @@
       IO = require('socket.io').listen(this.server.listen(7777, callback));
       IO.set('log level', 1);
       Games = {};
+      Hosted = {};
       Game = (function() {
-        function Game(host, game) {
+        function Game(host, msg) {
           this.host = host;
-          this.game = game;
+          this.id = "" + msg.game + "-" + (((1 + Math.random()) * 0x1000000 | 0).toString(16).substring(1));
+          Hosted[this.host] = this;
+          Games[this.id] = this;
+          this.players = [];
+          this.min = msg.min;
+          this.max = msg.max;
+          this.players.push(this.host);
         }
-        Game.prototype.player_cnt = function() {
-          return IO.sockets.clients(this.room()).length;
-        };
-        Game.prototype.room = function() {
-          return "" + this.host + "-" + this.game;
-        };
         Game.prototype.emit = function(e, m) {
-          return IO.sockets["in"](this.room()).emit(e, m);
+          return IO.sockets["in"](this.game).emit(e, m);
         };
         return Game;
       })();
       ChatConversation = [];
       IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {
-          var g, h, name, _i, _len, _ref;
+          var g, name, _i, _len, _ref;
           if (name = (_ref = msg.match(/I am (.+)$/)) != null ? _ref[1] : void 0) {
             this.set('name', name);
             this.emit('welcome', "Logged in as " + name);
-            this.emit('players', OnlinePlayers('name'));
-            this.emit('games', (function() {
-              var _results;
-              _results = [];
-              for (h in Games) {
-                g = Games[h];
-                _results.push((g.players = g.player_cnt(), g));
-              }
-              return _results;
-            })());
-            if (g = Games[name]) {
+            if (g = Hosted[name]) {
               this.join(g.room());
             }
             for (_i = 0, _len = ChatConversation.length; _i < _len; _i++) {
@@ -77,46 +68,74 @@
           return this.get('name', function(err, name) {
             if (name) {
               player.broadcast.send(name + ":   " + msg);
-              return ChatConversation.push(name + ':   ' + msg);
-            }
-          });
-        });
-        player.on('host', function(msg) {
-          return this.get('name', function(err, name) {
-            var game;
-            if (name) {
-              game = new Game(name, msg.game);
-              player.join(game.room());
-              Games[name] = game;
-              msg.host = name;
-              msg.players = game.player_cnt();
-              return player.broadcast.emit('host', msg);
-            }
-          });
-        });
-        player.on('join', function(msg) {
-          return this.get('name', function(err, name) {
-            var game;
-            if (name) {
-              game = Games[msg.host];
-              player.join(game.room());
-              return player.broadcast.emit('join', {
-                guest: name,
-                game: game.game
+              return ChatConversation.push({
+                player: name,
+                msg: msg
               });
             }
           });
         });
-        player.on('start', function(msg) {
-          return this.get('name', function(err, name) {
+        player.on('host', function(msg) {
+          return this.get('name', __bind(function(err, name) {
+            var game;
             if (name) {
-              return Games[name].emit('start');
+              game = new Game(name, msg);
+              msg.game = game.id;
+              msg.host = name;
+              this.join(game.id);
+              return IO.sockets.emit('host', msg);
             }
-          });
+          }, this));
         });
-        return player.on("move", function(msg) {
+        player.on('state', function(msg) {
+          return this.emit('state', State());
+        });
+        player.on('join', function(msg) {
+          return this.get('name', __bind(function(err, name) {
+            var game;
+            if (name) {
+              game = Games[msg.game];
+              if (game.players.length < game.max) {
+                game.players.push(name);
+                this.join(game.id);
+                msg.guest = name;
+                IO.sockets.emit('join', msg);
+                if (game.players.length === game.max) {
+                  Hosted[game.host] = void 0;
+                  return IO.sockets.emit('unhost', {
+                    host: game.host,
+                    game: game.id
+                  });
+                }
+              }
+            }
+          }, this));
+        });
+        player.on('games', function(msg) {
+          var game, id;
+          return this.emit('games', (function() {
+            var _results;
+            _results = [];
+            for (id in Games) {
+              game = Games[id];
+              _results.push({
+                game: id,
+                players: game.players
+              });
+            }
+            return _results;
+          })());
+        });
+        player.on('move', function(msg) {
           var _ref;
           return (_ref = G(player)) != null ? typeof _ref.emit === "function" ? _ref.emit('move', msg) : void 0 : void 0;
+        });
+        return player.on('logout', function(msg) {
+          return this.get('name', __bind(function(err, name) {
+            if (name) {
+              return IO.sockets.emit('logout', name);
+            }
+          }, this));
         });
       });
       G = __bind(function(socket) {
@@ -132,18 +151,38 @@
           return _results;
         })())[1]) != null ? _ref.slice(1) : void 0);
       }, this);
-      return OnlinePlayers = __bind(function(p) {
-        var i, s, _ref, _results;
-        _ref = IO.sockets.sockets;
-        _results = [];
-        for (i in _ref) {
-          s = _ref[i];
-          if (s.store.data[p]) {
-            _results.push(s.store.data[p]);
-          }
-        }
-        return _results;
-      }, this);
+      OnlinePlayers = __bind(function(p) {}, this);
+      return State = function() {
+        var game, i, name, s;
+        return {
+          players: (function() {
+            var _ref, _results;
+            _ref = IO.sockets.sockets;
+            _results = [];
+            for (i in _ref) {
+              s = _ref[i];
+              if (s.store.data['name']) {
+                name = s.store.data['name'];
+                _results.push((game = Hosted[name]) ? {
+                  name: name,
+                  game: {
+                    id: game.id,
+                    min: game.min,
+                    max: game.max,
+                    joined: game.players.length
+                  }
+                } : {
+                  name: name
+                });
+              }
+            }
+            return _results;
+          })(),
+          chat: ChatConversation,
+          games_played: Object.keys(Games).length,
+          msges_sent: ChatConversation.length
+        };
+      };
     },
     stop: function(callback) {
       IO.server.close();
