@@ -92,15 +92,13 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(msg).to.deep.equal( {
           players: [
             {
-              player:  "Anyname"
-              games: [
-                {
-                  game: GameInstanceID
-                  joined:  1
-                  min:     2
-                  max:     3
-                }
-              ]
+              name:  "Anyname"
+              game: { # hosted
+                game: GameInstanceID
+                joined:  1
+                min:     2
+                max:     3
+              }
             },
             { player: "Lukas" },
             { player: "Ananda"  }
@@ -133,6 +131,16 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         this.happens()
         expect(msg.host).to.equal "Anyname"
         expect(msg.game).to.equal GameInstanceID
+      @lukas.send 'state'
+      @lukas.on 'state', (msg) ->
+        expect(msg).to.deep.equal( {
+
+    it "may inform about active games (for debugging)", (done) ->
+      @lukas.send 'games'
+      @lukas.on 'games', (msg) ->
+        expect(msg.players[0].name).to.equal "Anyname"
+        expect(msg.players[0].game).to.equal undefined # not hosted anymore because it is already 'full'
+        done()
 
 
 
