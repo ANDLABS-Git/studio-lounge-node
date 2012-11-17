@@ -35,8 +35,8 @@
           Hosted[this.host] = this;
           Games[this.id] = this;
           this.players = [];
-          this.min = msg.min;
-          this.max = msg.max;
+          this.min = msg.min || 1;
+          this.max = msg.max || 42;
           this.players.push(this.host);
         }
         Game.prototype.emit = function(e, m) {
@@ -47,18 +47,18 @@
       ChatConversation = [];
       IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {
-          var g, name, _i, _len, _ref;
+          var game, name, _ref;
           if (name = (_ref = msg.match(/I am (.+)$/)) != null ? _ref[1] : void 0) {
             this.set('name', name);
             this.emit('welcome', "Logged in as " + name);
-            if (g = Hosted[name]) {
-              this.join(g.room());
+            player.broadcast.emit('login', name);
+            if (game = Hosted[name]) {
+              msg = {};
+              this.join(game.id);
+              msg.host = name;
+              msg.game = game.id;
+              return IO.sockets.emit('host', msg);
             }
-            for (_i = 0, _len = ChatConversation.length; _i < _len; _i++) {
-              msg = ChatConversation[_i];
-              this.send(msg);
-            }
-            return player.broadcast.emit('login', name);
           } else {
             this.emit('sorry', "Try again later");
             return this.disconnect('unauthorized');
@@ -92,10 +92,10 @@
         });
         player.on('join', function(msg) {
           return this.get('name', __bind(function(err, name) {
-            var game;
+            var game, _ref;
             if (name) {
               game = Games[msg.game];
-              if (game.players.length < game.max) {
+              if (((_ref = game.players) != null ? _ref.length : void 0) < game.max) {
                 game.players.push(name);
                 this.join(game.id);
                 msg.guest = name;
