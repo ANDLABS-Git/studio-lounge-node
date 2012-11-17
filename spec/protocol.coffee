@@ -37,8 +37,8 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
     it "should notify everyone about players that log in", (done) ->
       (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
-      (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
       @anyplayer.on 'login', (msg) => this.happens()
+      (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
       @troll.on 'login', (msg) -> expect("this").to.not.be.ok
       setTimeout ( () =>
         expect(@happens.calledTwice).to.be.ok

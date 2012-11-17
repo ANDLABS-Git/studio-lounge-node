@@ -29,8 +29,8 @@ module.exports =
         Hosted[@host] = @
         Games[@id] = @
         @players = []
-        @min = msg.min
-        @max = msg.max
+        @min = msg.min || 1
+        @max = msg.max || 42
         @players.push @host
       emit: (e,m) -> IO.sockets.in(@game).emit(e,m)
 
@@ -42,9 +42,13 @@ module.exports =
           @emit 'welcome', "Logged in as "+name
           #@emit 'players', OnlinePlayers 'name'
           #@emit 'games', ((g.players = g.player_cnt(); g) for h,g of Games)
-          @join g.room() if g = Hosted[name]
-          @send msg for msg in ChatConversation
           player.broadcast.emit 'login', name
+          if game = Hosted[name]
+            msg = {}
+            @join game.id
+            msg.host = name
+            msg.game = game.id
+            IO.sockets.emit 'host', msg
         else
           @emit 'sorry', "Try again later"
           @disconnect 'unauthorized'
@@ -64,7 +68,7 @@ module.exports =
       player.on 'join', (msg) ->
         @get 'name', (err, name) => if name
           game = Games[msg.game]
-          if game.players.length < game.max
+          if game.players?.length < game.max
             game.players.push name
             @join game.id
             msg.guest = name
