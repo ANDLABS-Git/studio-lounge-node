@@ -1,9 +1,10 @@
 server = require '../server'
 expect = require('chai').expect
-sinon = require 'sinon'
 io = require 'socket.io-client'
 BeginOfTest = 0
+InBetween = 0
 MatchId = ""
+History = 0
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
 #                         v0.4                           (draft)
@@ -54,6 +55,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @lukas.send "happy again :-)"
       @anyplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
+        History += 1
       @anotherplayer.on 'message', (msg) ->
         expect(msg).to.equal "Lukas:   happy again :-)"
         done()
@@ -68,7 +70,9 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
 
 
-  describe "MATCHING (players with instances of games)", () ->
+  describe "MATCHING (players with games)", () ->
+
+    InBetween = Date.now()
 
     it "should allow any logged in player to host games", (done) ->
       @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
@@ -77,6 +81,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(match.min).to.equal 2
         expect(match.max).to.equal 3
         MatchId = match.id # server assigned GUID
+        History += 1
       @lukas.on 'host', (match) ->
         expect(match.host).to.equal "Anyname"
         expect(match.min).to.equal 2
@@ -93,56 +98,51 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anyplayer.on 'join', (msg) =>
         expect(msg.player).to.equal "Ananda"
         expect(msg.id).to.equal MatchId
+        History += 1
         done()
 
   
   
 
 
-  describe "HISTORY (catch up)", ->
-
-    it "should tell (the diff) what happened in some meanwhile", (done) ->
-      @anyplayer.emit 'history', { since: Date.now }
-      @anyplayer.on 'history', (diffs) ->
-        expect(diffs).to.deep.equal( {
-          players: [],
-          games: [],
-          match: [],
-          chat: []
-          stats: { player_online: 3, games_played: 1}
-        } # not much happened since now :-)
-    
-      @anyplayer.emit 'history', { since: BeginOfTest }
-      @anyplayer.on 'history', (diffs) ->
-        expect(diffs).to.deep.equal( {
-          players: [],
-          games: [],
-          match: [ {
-            id: MatchID
-            min: 2
-            max: 3
-            host: "Anyname"
-            players: ["Ananda"]
-            } ],
-          chat: ["Lukas:   happy again :-)"]
-          stats: { player_online: 3, games_played: 1}
-        }
- 
- 
-
-
-
   describe "CUSTOM MESSAGING", () ->
 
-    it "should send custom game messages to everyone in the game", (done) ->
-      @anyplayer.emit 'move', {foo: "my", data: 42}
-      @anotherplayer.on 'move', (msg) =>
-        expect(msg).to.deep.equal( {
-          foo: "my"
-          data: 42
-        }
+    it "should broadcast game messages among players of a match", (done) ->
+      @anotherplayer.emit 'move', { foo: "my", data: 42 }
+      @anyplayer.on 'move', (msg) =>
+        expect(msg).to.deep.equal( { foo: "my", data: 42 }
+        History += 1
+        done()
 
 
+
+
+
+  describe "HISTORY (catch up)", ->
+
+    replay = History
+    
+    it "should tell no diff if nothing happened", (done) ->
+      @anyplayer.emit 'history', { since: Date.now }
+      setTimeout ( () ->
+        expect(History).to.equal replay # still the same
+        ), 333 #ms
+
+    it "should tell the difference if something happened in between", (done) ->
+      History = 0
+      @anyplayer.emit 'history', { since: InBetween }
+      setTimeout ( () ->
+        expect(History).to.equal 3   # [host, join, move] have been replayed 
+        ), 55 #ms
+
+    it "should tell the difference of everything that ever happened", (done) ->
+      History = 0
+      @anyplayer.emit 'history', { since: BeginOfTest }
+      setTimeout ( () ->
+        expect(History).to.equal replay
+        ), 55 #ms
+
+ 
 
 
 
