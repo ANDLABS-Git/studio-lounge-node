@@ -72,11 +72,15 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
     it "should allow any logged in player to host games", (done) ->
       @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
+      @anyplayer.on 'host', (match) -> # host gets it too
+        expect(match.host).to.equal "Anyname"
+        expect(match.min).to.equal 2
+        expect(match.max).to.equal 3
+        MatchId = match.id # server assigned GUID
       @lukas.on 'host', (match) ->
         expect(match.host).to.equal "Anyname"
         expect(match.min).to.equal 2
         expect(match.max).to.equal 3
-        MatchId = match.id
         done()
 
     it "should deny anyone else to host a new game", (done) ->
