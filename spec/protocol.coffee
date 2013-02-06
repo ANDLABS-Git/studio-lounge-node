@@ -3,7 +3,8 @@ expect = require('chai').expect
 io = require 'socket.io-client'
 BeginOfTest = 0
 InBetween = 0
-MatchId = ""
+GravityMatchId = ''
+MoleculeMatchId = ''
 History = 0
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
@@ -52,41 +53,67 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
     (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
 
     it "should allow players to chat in the public chatroom", (done) ->
-      @lukas.send "happy again :-)"
-      @anyplayer.on 'message', (msg) ->
-        expect(msg).to.equal "Lukas:   happy again :-)"
+      @lukas.emit 'chat', "happy again :-)"
+      @anyplayer.on 'chat', (msg) ->
+        expect(msg).to.deep.equal {
+          player: "Lukas",
+          text: "happy again :-)"
+        }
         History += 1
       @anotherplayer.on 'message', (msg) ->
-        expect(msg).to.equal "Lukas:   happy again :-)"
+        expect(msg).to.deep.equal {
+          player: "Lukas",
+          text: "happy again :-)"
+        }
         done()
  
     it "must not let players chat who are not logged in", (done) ->
       server.gcp().on 'connect', () ->
-        @send "I did not log in but I chat anayway"
-      @lukas.on 'message', (msg) -> expect(true).to.be.not.ok
-      setTimeout done, 58
+        @emit 'chat', "I did not log in but I chat anayway"
+      @lukas.on 'chat', (msg) -> expect(true).to.be.not.ok
+      setTimeout done, 100 #ms
 
 
 
 
 
-  describe "MATCHING (players with games)", () ->
+  describe "GAME APPublishing", () ->
+
+    xit "should let the server publish game apps", (done) ->
+      server.post { game: "new.game", name: "FunnyFoo" }
+      @lukas.on 'publish', (game) ->
+        expect(game).to.deep.equal {
+          game: "new.game",
+          name: "FunnyFoo"
+        }
+        done()
+
+
+
+
+
+  describe "MATCH MAKING (players <-> games)", () ->
 
     InBetween = Date.now()
 
     it "should allow any logged in player to host games", (done) ->
-      @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
+      @anyplayer.emit 'host', { game: "de.gravity", max: 3 }
       @anyplayer.on 'host', (match) -> # host gets it too
+        GravityMatchId = match.id # server assigned GUID
+        expect(match.game).to.equal "de.gravity"
         expect(match.host).to.equal "Anyname"
-        expect(match.min).to.equal 2
         expect(match.max).to.equal 3
-        MatchId = match.id # server assigned GUID
+        expect(match.id).to.be.ok
         History += 1
       @lukas.on 'host', (match) ->
+        expect(match.game).to.equal "de.gravity"
         expect(match.host).to.equal "Anyname"
-        expect(match.min).to.equal 2
         expect(match.max).to.equal 3
+        expect(match.id).to.be.ok
         done()
+      @lukas.emit 'host', { game: "de.mole", max: 3 }
+      @anotherplayer.on 'host', (match) ->
+        MoleculeMatchId = match.id
 
     it "should deny anyone else to host a new game", (done) ->
       @troll.emit 'host', { game: "a.random.game", min: 43, max: 55 }
@@ -94,25 +121,52 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       setTimeout done, 58
  
     it "should broadcast that another player joins", (done) ->
-      @anotherplayer.on 'join', (msg) =>
+      @anotherplayer.emit 'join', { match: GravityMatchId }
       @anyplayer.on 'join', (msg) =>
         expect(msg.player).to.equal "Ananda"
-        expect(msg.id).to.equal MatchId
+        expect(msg.match).to.equal GravityMatchId
         History += 1
         done()
+      @anyplayer.emit 'join', { match: MoleculeMatchId }
 
-  
-  
+
+
 
 
   describe "CUSTOM MESSAGING", () ->
 
     it "should broadcast game messages among players of a match", (done) ->
-      @anotherplayer.emit 'move', { foo: "my", data: 42 }
-      @anyplayer.on 'move', (msg) =>
-        expect(msg).to.deep.equal( { foo: "my", data: 42 }
+      @anyplayer.emit 'msg', {
+        foo: "my", data: 42,
+        match: GravityMatchId
+        persist: 1
+      }
+      @anotherplayer.on 'msg', (msg) =>
+        expect(msg).to.deep.equal {
+          foo: "my", data: 42,
+          match: GravityMatchId,
+          sender: "Anyname",
+          next: "Ananda",
+          persist: 1
+        }
         History += 1
         done()
+
+
+
+
+
+  describe "CHECKING IN AND OUT", () ->
+
+    it "should let player check into the lobby", (done) ->
+      @lukas.emit 'checkin', "lobby-xy"
+      @anyplayer.on 'checkin', (status) ->
+        expect(status.player).to.equal "Lukas"
+        expect(status.match).to.equal "lobby-xy"
+      # status updates only for matched players
+      @anotherplayer.on 'checkin', (status) ->
+        expect("this").to.be.not.ok
+      setTimeout done, 99 # ms
 
 
 
