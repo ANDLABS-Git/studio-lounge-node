@@ -4,7 +4,7 @@
   IO = 10;
   module.exports = {
     start: function(callback) {
-      var ChatConversation, G, Game, Games, Hosted, OnlinePlayers, State, express;
+      var History, RandomGUID, SelectNext, express;
       this.server = (express = require('express'))();
       this.server.set('views', "views");
       this.server.set('view engine', 'jade');
@@ -16,172 +16,115 @@
       this.server.get('/', function(req, res) {
         return res.render('points');
       });
-      this.server.get('/points', function(req, res) {
-        return res.render('points');
-      });
-      this.server.get('/stats', function(req, res) {
-        return res.render('stats', {
-          games: Games
-        });
-      });
       IO = require('socket.io').listen(this.server.listen(7777, callback));
       IO.set('log level', 1);
-      Games = {};
-      Hosted = {};
-      Game = (function() {
-        function Game(host, msg) {
-          this.host = host;
-          this.id = "" + msg.game + "-" + (((1 + Math.random()) * 0x1000000 | 0).toString(16).substring(1));
-          Hosted[this.host] = this;
-          Games[this.id] = this;
-          this.players = [];
-          this.min = msg.min || 1;
-          this.max = msg.max || 42;
-          this.players.push(this.host);
-        }
-        Game.prototype.emit = function(e, m) {
-          return IO.sockets["in"](this.game).emit(e, m);
-        };
-        return Game;
-      })();
-      ChatConversation = [];
+      History = [];
       IO.sockets.on('connection', function(player) {
         player.on('login', function(msg) {
-          var game, name, _ref;
+          var name, _ref;
           if (name = (_ref = msg.match(/I am (.+)$/)) != null ? _ref[1] : void 0) {
             this.set('name', name);
-            this.emit('welcome', "Logged in as " + name);
-            player.broadcast.emit('login', name);
-            if (game = Hosted[name]) {
-              msg = {};
-              this.join(game.id);
-              msg.host = name;
-              msg.game = game.id;
-              return IO.sockets.emit('host', msg);
-            }
+            return this.emit('welcome', "Logged in as " + name);
           } else {
             this.emit('sorry', "Try again later");
             return this.disconnect('unauthorized');
           }
         });
-        player.on('message', function(msg) {
+        player.on('chat', function(text) {
           return this.get('name', function(err, name) {
+            var msg;
             if (name) {
-              player.broadcast.send(name + ":   " + msg);
-              return ChatConversation.push({
-                player: name,
+              msg = {
+                text: text,
+                sender: name
+              };
+              IO.sockets.emit('chat', msg);
+              return History.push({
+                what: 'chat',
                 msg: msg
               });
             }
           });
         });
-        player.on('host', function(msg) {
+        player.on('host', function(match) {
           return this.get('name', __bind(function(err, name) {
-            var game;
             if (name) {
-              game = new Game(name, msg);
-              msg.game = game.id;
-              msg.host = name;
-              this.join(game.id);
-              return IO.sockets.emit('host', msg);
-            }
-          }, this));
-        });
-        player.on('state', function(msg) {
-          return this.emit('state', State());
-        });
-        player.on('join', function(msg) {
-          return this.get('name', __bind(function(err, name) {
-            var game, _ref;
-            if (name) {
-              game = Games[msg.game];
-              if (((_ref = game.players) != null ? _ref.length : void 0) < game.max) {
-                game.players.push(name);
-                this.join(game.id);
-                msg.guest = name;
-                IO.sockets.emit('join', msg);
-                if (game.players.length === game.max) {
-                  Hosted[game.host] = void 0;
-                  return IO.sockets.emit('unhost', {
-                    host: game.host,
-                    game: game.id
-                  });
-                }
-              }
-            }
-          }, this));
-        });
-        player.on('games', function(msg) {
-          var game, id;
-          return this.emit('games', (function() {
-            var _results;
-            _results = [];
-            for (id in Games) {
-              game = Games[id];
-              _results.push({
-                game: id,
-                players: game.players
+              match.id = RandomGUID();
+              match.host = name;
+              this.join(match.id);
+              IO.sockets.emit('host', match);
+              return History.push({
+                what: 'host',
+                msg: match
               });
             }
-            return _results;
-          })());
+          }, this));
         });
-        player.on('move', function(msg) {
-          var _ref;
-          return (_ref = G(player)) != null ? typeof _ref.emit === "function" ? _ref.emit('move', msg) : void 0 : void 0;
-        });
-        return player.on('logout', function(msg) {
+        player.on('join', function(match) {
           return this.get('name', __bind(function(err, name) {
             if (name) {
-              return IO.sockets.emit('logout', name);
+              this.join(match.id);
+              match.player = name;
+              IO.sockets.emit('join', match);
+              return History.push({
+                what: 'join',
+                msg: match
+              });
             }
           }, this));
         });
-      });
-      G = __bind(function(socket) {
-        var obj, room, _ref;
-        return IO.sockets["in"]((_ref = ((function() {
-          var _ref2, _results;
-          _ref2 = IO.sockets.manager.roomClients[socket.id];
+        player.on('msg', function(msg) {
+          return this.get('name', __bind(function(err, name) {
+            if (name) {
+              msg.sender = name;
+              msg.next = SelectNext(msg.match, name);
+              IO.sockets["in"](msg.match).emit('msg', msg);
+              return History.push({
+                what: 'msg',
+                msg: msg
+              });
+            }
+          }, this));
+        });
+        player.on('history', function(msg) {
+          var m, _i, _len, _results;
           _results = [];
-          for (room in _ref2) {
-            obj = _ref2[room];
-            _results.push(room);
+          for (_i = 0, _len = History.length; _i < _len; _i++) {
+            m = History[_i];
+            _results.push(this.emit(m.what, m.msg));
           }
           return _results;
-        })())[1]) != null ? _ref.slice(1) : void 0);
-      }, this);
-      OnlinePlayers = __bind(function(p) {}, this);
-      return State = function() {
-        var game, i, name, s;
-        return {
-          players: (function() {
-            var _ref, _results;
-            _ref = IO.sockets.sockets;
-            _results = [];
-            for (i in _ref) {
-              s = _ref[i];
-              if (s.store.data['name']) {
-                name = s.store.data['name'];
-                _results.push((game = Hosted[name]) ? {
-                  name: name,
-                  game: {
-                    id: game.id,
-                    min: game.min,
-                    max: game.max,
-                    joined: game.players.length
-                  }
-                } : {
-                  name: name
-                });
-              }
+        });
+        return player.on('logout', function(msg) {
+          return console.log("logout");
+        });
+      });
+      RandomGUID = function() {
+        return ((1 + Math.random()) * 0x1000000 | 0).toString(16).substring(1);
+      };
+      return SelectNext = function(match, activePlayer) {
+        var n, s;
+        return ((function() {
+          var _i, _len, _ref, _results;
+          _ref = (function() {
+            var _j, _len, _ref, _results2;
+            _ref = IO.sockets.clients(match);
+            _results2 = [];
+            for (_j = 0, _len = _ref.length; _j < _len; _j++) {
+              s = _ref[_j];
+              _results2.push(s.store.data.name);
             }
-            return _results;
-          })(),
-          chat: ChatConversation,
-          games_played: Object.keys(Games).length,
-          msges_sent: ChatConversation.length
-        };
+            return _results2;
+          })();
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            n = _ref[_i];
+            if (n !== activePlayer) {
+              _results.push(n);
+            }
+          }
+          return _results;
+        })())[0];
       };
     },
     stop: function(callback) {
