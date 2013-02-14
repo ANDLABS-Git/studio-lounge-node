@@ -1,25 +1,36 @@
 server = require '../server'
 expect = require('chai').expect
-sinon = require 'sinon'
 io = require 'socket.io-client'
-GameInstanceID = ""
+BeginOfTest = 0
+InBetween = 0
+GravityMatchId = ''
+MoleculeMatchId = ''
+History = 0
 
 #   GCP PROTOCOL SPECIFICATION   *StudioLounge Multiplayer Game*
-#                         v0.3                           (final)
+#                         v0.4                           (draft)
 #   (in)formal description of digital message formats and rules, 
 #   for exchanging of theese messages between computing systems,
 #   defines syntax, semantics, synchronization of communication;
 #   the specified behavior is independent of how it implemented.
 #                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.4 \n", ->
 
-  before (test) -> server.start test
+  before (test) ->
+    server.start test
+    (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
+    (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
   
   it "should make developers smile", -> expect(":-)").to.be.ok
 
 
+
+
+
   describe "LOGIN", ->
+
+    BeginOfTest = Date.now
 
     it "should allow any player to login with any name", (done) ->
       (@anyplayer = server.gcp()).on "connect", () ->
@@ -35,150 +46,161 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           expect(msg).to.equal "Try again later"
           done()
 
-    it "should notify everyone about players that log in", (done) ->
-      (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
-      @anyplayer.on 'login', (msg) => this.happens()
-      (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
-      @troll.on 'login', (msg) -> expect("this").to.not.be.ok
-      setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
-        done() ), 21 # ms responsiveness !!!  
+
 
 
 
   describe "CHATTING", ->
 
-    it "must allow players to chat in the public chatroom", (done) ->
-      @lukas.send "happy again :-)"
-      @anyplayer.on 'message', (msg) ->
-        expect(msg).to.equal "Lukas:   happy again :-)"
-      @anotherplayer.on 'message', (msg) ->
-        expect(msg).to.equal "Lukas:   happy again :-)"
-        done()
-
+    it "should allow players to chat in the public chatroom", (done) ->
+      @lukas.emit 'chat', "happy again :-)"
+      @anyplayer.on 'chat', (msg) ->
+        expect(msg).to.deep.equal {
+          text: "happy again :-)"
+          sender: "Lukas",
+        }
+        History += 1
+      @anotherplayer.on 'chat', (msg) =>
+        expect(msg).to.deep.equal {
+          text: "happy again :-)"
+          sender: "Lukas",
+        }
+        done() unless @historyTest
+ 
     it "must not let players chat who are not logged in", (done) ->
       server.gcp().on 'connect', () ->
-        @send "I did not log in but I chat anayway"
-      @lukas.on 'message', (msg) -> expect(true).to.be.not.ok
-      setTimeout done, 58
+        @emit 'chat', "I did not log in but I chat anayway"
+      @lukas.on 'chat', (msg) -> expect(true).to.be.not.ok
+      setTimeout done, 100 #ms
 
 
 
-  describe "HOSTING GAMES", () ->
 
-    it "should allow any logged in player to host games", (done) ->
-      @anyplayer.emit 'host', { game: "my.game", min: 2, max: 3}
-      @lukas.on 'host', (msg) ->
-        expect(msg.game).to.match /my\.game-.+/
-        expect(msg.host).to.equal "Anyname"
-        expect(msg.min).to.equal 2
-        expect(msg.max).to.equal 3
-      @anyplayer.on 'host', (msg) ->   # host gets the msg too 
-        expect(msg.game).to.match /my\.game-.+/
-        expect(msg.host).to.equal "Anyname"
-        expect(msg.min).to.equal 2
-        expect(msg.max).to.equal 3
-        GameInstanceID = msg.game
+
+  describe "GAME APPublishing", () ->
+
+    xit "should let the server publish game apps", (done) ->
+      server.post { game: "new.game", name: "FunnyFoo" }
+      @lukas.on 'publish', (game) ->
+        expect(game).to.deep.equal {
+          game: "new.game",
+          name: "FunnyFoo"
+        }
         done()
 
+
+
+
+
+  describe "MATCH MAKING (players <-> games)", () ->
+
+    InBetween = Date.now()
+
+    it "should allow any logged in player to host games", (done) ->
+      @anyplayer.emit 'host', { game: "de.gravity", max: 3 }
+      @anyplayer.on 'host', (match) -> # host gets it too
+        GravityMatchId = match.id # server assigned GUID
+        expect(match.game).to.equal "de.gravity"
+        expect(match.host).to.equal "Anyname"
+        expect(match.max).to.equal 3
+        expect(match.id).to.be.ok
+        History += 1
+      @lukas.on 'host', (match) =>
+        expect(match.game).to.equal "de.gravity"
+        expect(match.host).to.equal "Anyname"
+        expect(match.max).to.equal 3
+        expect(match.id).to.be.ok
+        done() unless @historyTest
+
     it "should deny anyone else to host a new game", (done) ->
-      @troll.emit 'host', { game: "a.random.game"}
+      @troll.emit 'host', { game: "a.random.game", min: 43, max: 55 }
       @anotherplayer.on 'host', (msg) -> expect("that").to.be.not.ok
       setTimeout done, 58
  
-    it "should inform about everything upon request", (done) ->
-      @lukas.emit 'state'
-      @lukas.on 'state', (msg) ->
-        expect(msg).to.deep.equal( {
-          players: [
-            {
-              name:  "Anyname"
-              game: { # hosted
-                id: GameInstanceID
-                min:     2
-                max:     3
-                joined:  1
-              }
-            },
-            { name: "Lukas" },
-            { name: "Ananda"  }
-          ],
-          chat: [ { player: "Lukas", msg: "happy again :-)" } ],
-          games_played: 1,
-          msges_sent: 1
-        })
-        done()
+    it "should broadcast that another player joins", (done) ->
+      @anotherplayer.emit 'join', { id: GravityMatchId }
+      @anyplayer.on 'join', (match) =>
+        expect(match.player).to.equal "Ananda"
+        expect(match.id).to.equal GravityMatchId
+        History += 1
+        done() unless @historyTest
 
-    it "should tell all players when another player joins", (done) ->
-      @anotherplayer.emit 'join', { game: GameInstanceID }
-      @anotherplayer.on 'join', (msg) =>
-        this.happens()
-        expect(msg.game).to.equal GameInstanceID
-      @anyplayer.on 'join', (msg) =>
-        this.happens()
-        expect(msg.game).to.equal GameInstanceID
-      setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
-        done() ), 42 # ms responsiveness !!!
 
-    it "should allow a server to unhost games (e.g. when full)" , (done) ->
-      @lukas.emit 'join', { game: GameInstanceID }
-      @anyplayer.on "unhost", (msg) =>
-        expect(msg.host).to.equal "Anyname"
-        expect(msg.game).to.equal GameInstanceID
-      @anotherplayer.on "unhost", (msg) =>
-        expect(msg.host).to.equal "Anyname"
-        expect(msg.game).to.equal GameInstanceID
-        @anotherplayer.emit 'state'
-        @anotherplayer.on 'state', (msg) -> # not hosted anymore because it is already 'full'
-          expect(msg.players[0].game).to.equal undefined
-          done()
-
-    it "may inform about active games (for debugging)", (done) ->
-      @lukas.emit 'games'
-      @lukas.on 'games', (msg) ->
-        expect(msg).to.deep.equal( [
-          {
-            game: GameInstanceID,
-            players: ["Anyname", "Ananda", "Lukas"]
-          }
-        ] )
-        done()
 
 
 
   describe "CUSTOM MESSAGING", () ->
 
-    it "should send custom game move messages to everyone in the game", (done) ->
-      @anyplayer.emit 'move', {abc: "my", data: 42}
-      @lukas.on 'move', (msg) => this.happens()
-      @anotherplayer.on 'move', (msg) =>
-        expect(msg.abc).to.equal "my"
-        expect(msg.data).to.equal 42
-        this.happens()
-      setTimeout ( () =>
-        expect(@happens.calledTwice).to.be.ok
-        done() ), 42 # ms
-
-
-
-  describe "LOGOUT", () ->
-
-    it "should notify about players that log out", (done) ->
-      @anyplayer.emit 'logout'
-      @anotherplayer.on 'logout', (msg) ->
-        expect(msg).to.equal "Anyname"
+    it "should broadcast game messages among players of a match", (done) ->
+      @anyplayer.emit 'msg', {
+        foo: "my", data: 42,
+        match: GravityMatchId
+      }
+      @anotherplayer.on 'msg', (msg) =>
+        expect(msg).to.deep.equal {
+          foo: "my", data: 42,
+          match: GravityMatchId,
+          sender: "Anyname",
+          next: "Ananda",
+        }
         done()
 
 
 
 
+
+  describe "CHECKING IN AND OUT", () ->
+
+    xit "should let player check into the lobby", (done) ->
+      @lukas.emit 'checkin', "lobby-xy"
+      @anyplayer.on 'checkin', (status) ->
+        expect(status.player).to.equal "Lukas"
+        expect(status.match).to.equal "lobby-xy"
+      # status updates only for matched players
+      @anotherplayer.on 'checkin', (status) ->
+        expect("this").to.be.not.ok
+      setTimeout done, 99 # ms
+
+
+
+
+
+  describe "HISTORY (catch up)", ->
+
+    it "should tell no diff if nothing happened", (done) ->
+      @historyTest = true
+      replay = History
+      History = 0
+      @anyplayer.emit 'history', { since: Date.now }
+      setTimeout ( () ->
+        expect(History).to.equal replay # still the same
+        done()
+        ), 333 #ms
+
+    xit "should tell the difference if something happened in between", (done) ->
+      History = 0
+      @anyplayer.emit 'history', { since: InBetween }
+      setTimeout ( () ->
+        expect(History).to.equal 3   # [host, join, move] have been replayed 
+        ), 55 #ms
+
+    xit "should tell the difference of everything that ever happened", (done) ->
+      History = 0
+      @anyplayer.emit 'history', { since: BeginOfTest }
+      setTimeout ( () ->
+        expect(History).to.equal replay
+        ), 55 #ms
+
+ 
+
+
+
+
+
 # it "should allow players to send private messages", (done) ->
-
 # it "should bring multiple game players together ", (done) ->
-
 # it "should empower players to plant happy* trees", (done) ->
 
-  after (test) -> server.stop test
+  beforeEach () -> @historyTest = false
 
-  beforeEach () -> @happens = sinon.spy()
+  after (test) -> server.stop test
