@@ -1,3 +1,8 @@
+# Lounge Game Communication Protocol
+#
+# Copyright (c) 2013 by it's authors.
+# Some rights reserved. See LICENSE..
+
 server = require '../server'
 expect = require('chai').expect
 sinon = require 'sinon'
