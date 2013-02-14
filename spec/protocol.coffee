@@ -15,9 +15,12 @@ History = 0
 #   the specified behavior is independent of how it implemented.
 #                                             ~~ wikipedia  ###
 
-describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
+describe "Game COMMUNICATIONS PROTOCOL Specification v0.4 \n", ->
 
-  before (test) -> server.start test
+  before (test) ->
+    server.start test
+    (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
+    (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
   
   it "should make developers smile", -> expect(":-)").to.be.ok
 
@@ -49,23 +52,20 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   describe "CHATTING", ->
 
-    (@anotherplayer = server.gcp()).on "connect", () -> @emit 'login', "I am Ananda"
-    (@lukas = server.gcp()).on "connect", () -> @emit 'login', "I am Lukas"
-
     it "should allow players to chat in the public chatroom", (done) ->
       @lukas.emit 'chat', "happy again :-)"
       @anyplayer.on 'chat', (msg) ->
         expect(msg).to.deep.equal {
-          player: "Lukas",
           text: "happy again :-)"
+          sender: "Lukas",
         }
         History += 1
-      @anotherplayer.on 'message', (msg) ->
+      @anotherplayer.on 'chat', (msg) =>
         expect(msg).to.deep.equal {
-          player: "Lukas",
           text: "happy again :-)"
+          sender: "Lukas",
         }
-        done()
+        done() unless @historyTest
  
     it "must not let players chat who are not logged in", (done) ->
       server.gcp().on 'connect', () ->
@@ -105,15 +105,12 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
         expect(match.max).to.equal 3
         expect(match.id).to.be.ok
         History += 1
-      @lukas.on 'host', (match) ->
+      @lukas.on 'host', (match) =>
         expect(match.game).to.equal "de.gravity"
         expect(match.host).to.equal "Anyname"
         expect(match.max).to.equal 3
         expect(match.id).to.be.ok
-        done()
-      @lukas.emit 'host', { game: "de.mole", max: 3 }
-      @anotherplayer.on 'host', (match) ->
-        MoleculeMatchId = match.id
+        done() unless @historyTest
 
     it "should deny anyone else to host a new game", (done) ->
       @troll.emit 'host', { game: "a.random.game", min: 43, max: 55 }
@@ -121,13 +118,12 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       setTimeout done, 58
  
     it "should broadcast that another player joins", (done) ->
-      @anotherplayer.emit 'join', { match: GravityMatchId }
-      @anyplayer.on 'join', (msg) =>
-        expect(msg.player).to.equal "Ananda"
-        expect(msg.match).to.equal GravityMatchId
+      @anotherplayer.emit 'join', { id: GravityMatchId }
+      @anyplayer.on 'join', (match) =>
+        expect(match.player).to.equal "Ananda"
+        expect(match.id).to.equal GravityMatchId
         History += 1
-        done()
-      @anyplayer.emit 'join', { match: MoleculeMatchId }
+        done() unless @historyTest
 
 
 
@@ -139,7 +135,6 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
       @anyplayer.emit 'msg', {
         foo: "my", data: 42,
         match: GravityMatchId
-        persist: 1
       }
       @anotherplayer.on 'msg', (msg) =>
         expect(msg).to.deep.equal {
@@ -147,9 +142,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
           match: GravityMatchId,
           sender: "Anyname",
           next: "Ananda",
-          persist: 1
         }
-        History += 1
         done()
 
 
@@ -158,7 +151,7 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   describe "CHECKING IN AND OUT", () ->
 
-    it "should let player check into the lobby", (done) ->
+    xit "should let player check into the lobby", (done) ->
       @lukas.emit 'checkin', "lobby-xy"
       @anyplayer.on 'checkin', (status) ->
         expect(status.player).to.equal "Lukas"
@@ -174,22 +167,24 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 
   describe "HISTORY (catch up)", ->
 
-    replay = History
-    
     it "should tell no diff if nothing happened", (done) ->
+      @historyTest = true
+      replay = History
+      History = 0
       @anyplayer.emit 'history', { since: Date.now }
       setTimeout ( () ->
         expect(History).to.equal replay # still the same
+        done()
         ), 333 #ms
 
-    it "should tell the difference if something happened in between", (done) ->
+    xit "should tell the difference if something happened in between", (done) ->
       History = 0
       @anyplayer.emit 'history', { since: InBetween }
       setTimeout ( () ->
         expect(History).to.equal 3   # [host, join, move] have been replayed 
         ), 55 #ms
 
-    it "should tell the difference of everything that ever happened", (done) ->
+    xit "should tell the difference of everything that ever happened", (done) ->
       History = 0
       @anyplayer.emit 'history', { since: BeginOfTest }
       setTimeout ( () ->
@@ -206,6 +201,6 @@ describe "Game COMMUNICATIONS PROTOCOL Specification v0.3 \n", ->
 # it "should bring multiple game players together ", (done) ->
 # it "should empower players to plant happy* trees", (done) ->
 
-  after (test) -> server.stop test
+  beforeEach () -> @historyTest = false
 
-  beforeEach () -> @happens = sinon.spy()
+  after (test) -> server.stop test
