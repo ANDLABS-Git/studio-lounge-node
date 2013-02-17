@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<html>
+  <!--
+      Basic header.
+    -->
+  <head>
+    <title>Andlab Lounge (Debug)</title>
+    <style>
+      p { margin:0; color:blue; }
+      h1 {margin:10; color:red; }
+    </style>
+    <h1><img style="width: 72px; height: 72px;" src="img/andlabs.png"> Andlab Lounge - Web client (debug)<br/></h1>
+  </head>
+
+  <body>
+
+    <!--
+	Define external javascript inclusions here.
+      -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+      function submit_login() {
+        var user = document.forms.login.user.value;
+        var pass = document.forms.login.pass.value;
+        var sock = io.connect("http://localhost:7777", function(data) {
+          sock.emit("login_req", { username:user, password:pass});
+        });
+      }
+    </script>
+    <!--
+	Page content.
+      -->
+    <p><br/>Please log in to access page content.<br/></p>
+    <form id="login" name="login_form">
+      <input type="text" value="Username" name="user">
+      <input type="password" value="*****" name="pass">
+      <input type="button" value="Submit request" name="login_sub" onclick="submit_login();">
+    </form>
+  </body>
+</html>

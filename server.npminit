@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+/**
+ * Copyright (C) 2013 ANDLABS. All rights reserved.
+ * Author: Shawn Davies <sodxeh@gmail.com>
+ *
+ * This file is one of the first things executed upon the start of the node lounge server. You could informally think of this class as the "main" method. 
+ */
+
+var server = require("./src/loungeserv");
+
+server.srv_init(function() {
+//    var webconnect = server.cl_force_bind();
+    console.log("AndLab Lounge - Powered by Node.js\n\tWeb connection bound!\n\t\tUp and running!");
+});
