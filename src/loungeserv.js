@@ -7,48 +7,85 @@
  * This script contains code for actually initalizing the different sockets we use and callbacks to those sockets.
  */
 
+
+/**
+ * Dependent packages from node.js package manager.
+ */
 var exprserv = (expr = require("express"))(), sio = require("socket.io"), sioc = require("socket.io-client");
 
+/**
+ * We require this router class to perform all http rerouting.
+ * This router script may become deprecated in the future, depending on where we decide
+ * to go with the design of this server architecture.
+ */
 require("./router.js");
 
-(function() {
-    module.exports = {
-	srv_init: function(callback) {
-	    var route = new router();
-	    exprserv.use(expr.bodyParser()).use(expr.static("public"))
-		.set('view options', {
-		    pretty: true
-		}).set('view engine', 'jade').set('views', "./public/views");
+/**
+ * The array of connected sessions, sorted by a key type of 'socket'.
+ */
+var sessions = [];
 
-	    var listener = sio.listen(exprserv.listen(7777, callback)).set('log level', 1);
+/**
+ * A simple representation of a connected client. This will probably be built upon in the near future.
+ */
+function Session(username, password, socket) {
+    this.username = username;
+    this.password = password;
+    this.socket = socket;
+}
 
-	    exprserv.get('/', function(request, result) {// Requesting root
-		if (request.route.method == 'get') {// It's requesting a page, so let's simply give the client our index page for now.
-		    // Later we can add support here for rerouting of the client's location depending on current lounge location.
-		    var post = route.post_file(result, request, "index.html");//route.post_render(result, 'index');
-		    if (post != null) {
-			return post;
-		    }
-		}
+/**
+ * The exports of this server script. This is what is included in require('loungeserv.js').
+ */
+module.exports = {
+    srv_init: function(callback) {	  
+	var route = new router();
+	exprserv.use(expr.bodyParser()).use(expr.static("public"))
+	    .set('view options', {
+		pretty: true
 	    });
 
-	    listener.sockets.on('connection', function(sock) {
-		console.log("New connection");
-		sock.on('login_req', function(data) {
-		    console.log(data);
-		    sock.get('username', function(error, user) {
-			console.log("Login request from "+user);
-		    });
+	var listener = sio.listen(exprserv.listen(7777, callback)).set('log level', 1);
+
+	exprserv.get('/', function(request, result) {// Requesting root
+	    if (request.route.method == 'get') {// It's requesting a page, so let's simply give the client our index page for now.
+		// Later we can add support here for rerouting of the client's location depending on current lounge location.
+		var post = route.post_file(result, request, "index.html");//route.post_render(result, 'index');
+		if (post != null) {
+		    return post;
+		}
+	    }
+	});
+
+	listener.sockets.on('connection', function(sock) {
+
+	    sock.on('provide_user', function(user) {// TODO It is possible to simplify provide_user/provide_pass into one emition,
+		// but i'm not sure how yet.
+		sock.on('provide_pass', function(pass) {
+		    // Check database here for username/password verification
+		    if (sessions[user] != null) {
+			return;// user is already logged in (probably?).
+		    }
+		    
+		    var session = sessions[sock] = new Session(user, pass, sock.join('main'));
+		    session.socket.broadcast.to(session.socket.room).emit('chat_append', 'Master Lounge', session.username+ ' is now in the chat lounge.');// Announce to the main channel that 
+		    //this user has connected.
+
+		    console.log('\nSession info:');
+		    console.log(session);
 		});
 	    });
 
-	},
+	    sock.on('disconnect', function() {
+		listener.emit('chat_append', 'Master Lounge', 'User disconnected.');// emit to all connected clients that the user has disconnected.
+		//TODO Add reasoning behind disconnection, as well as print socket name and so on.
 
-	cl_force_bind: function() {
-	    return sioc.connect("http://localhost:7777", {
-		'force new connection': true
+		sock.leave(sock.room);
+		delete sessions[sock];
+
+		console.log("Socket disconnected.");
 	    });
-	},
-    };
-    
-}).call(this);
+	});
+    },
+
+};

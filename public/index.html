@@ -21,13 +21,14 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      function submit_login() {
-        var user = document.forms.login.user.value;
-        var pass = document.forms.login.pass.value;
-        var sock = io.connect("http://localhost:7777", function(data) {
-          sock.emit("login_req", { username:user, password:pass});
-        });
-      }
+    function submit_login() {
+      var user = document.forms.login.user.value;
+      var pass = document.forms.login.pass.value;
+      (socket = io.connect()).on("connect", function() {
+        socket.emit("provide_user", user);
+        socket.emit("provide_pass", pass);
+      });
+    }
     </script>
     <!--
 	Page content.
