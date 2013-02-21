@@ -11,5 +11,5 @@ var server = require("./src/loungeserv");
 
 server.srv_init(function() {
 //    var webconnect = server.cl_force_bind();
-    console.log("AndLab Lounge - Powered by Node.js\n\tWeb connection bound!\n\t\tUp and running!");
+    console.log("AndLab Lounge - Powered by Node.js\n\tWeb connection bound!\n\t\tUp and running!\n");
 });

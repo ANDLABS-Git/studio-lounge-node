@@ -38,7 +38,7 @@ function Session(username, password, socket) {
  * The exports of this server script. This is what is included in require('loungeserv.js').
  */
 module.exports = {
-    srv_init: function(callback) {	  
+    srv_init: function(callback) { 
 	var route = new router();
 	exprserv.use(expr.bodyParser()).use(expr.static("public"))
 	    .set('view options', {
@@ -59,21 +59,17 @@ module.exports = {
 
 	listener.sockets.on('connection', function(sock) {
 
-	    sock.on('provide_user', function(user) {// TODO It is possible to simplify provide_user/provide_pass into one emition,
-		// but i'm not sure how yet.
-		sock.on('provide_pass', function(pass) {
-		    // Check database here for username/password verification
-		    if (sessions[user] != null) {
-			return;// user is already logged in (probably?).
-		    }
-		    
-		    var session = sessions[sock] = new Session(user, pass, sock.join('main'));
-		    session.socket.broadcast.to(session.socket.room).emit('chat_append', 'Master Lounge', session.username+ ' is now in the chat lounge.');// Announce to the main channel that 
-		    //this user has connected.
+	    sock.on('provide_login', function(user, pass) {
+		if (sessions[user] != null) {
+		    return;// user is already logged in (probably?).
+		}
+		
+		var session = sessions[sock] = new Session(user, pass, sock.join('main'));
+		session.socket.broadcast.to(session.socket.room).emit('chat_append', 'Master Lounge', session.username+ ' is now in the chat lounge.');// Announce to the main channel that 
+		//this user has connected.
 
-		    console.log('\nSession info:');
-		    console.log(session);
-		});
+		console.log('\nSession info:');
+		console.log(session);
 	    });
 
 	    sock.on('disconnect', function() {
