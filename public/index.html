@@ -21,12 +21,22 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
+    var socket;
     function submit_login() {
-      var user = document.forms.login.user.value;
-      var pass = document.forms.login.pass.value;
-      (socket = io.connect()).on("connect", function() {
-        socket.emit("provide_login", user, pass);
-      });
+	var user = document.forms.login.user.value;
+	var pass = document.forms.login.pass.value;
+	(socket = io.connect()).on("connect", function() {
+            socket.emit("provide_login", user, pass);
+
+            socket.on("response_login", function(code) {
+		document.forms.login.pass.value = "";
+		if (code == 0) {
+	  	    return alert("Logged in!");
+		}
+		socket.disconnect();
+		return alert("Invalid response code: "+code);
+            });
+	});
     }
     </script>
     <!--
@@ -34,8 +44,8 @@
       -->
     <p><br/>Please log in to access page content.<br/></p>
     <form id="login" name="login_form">
-      <input type="text" value="Username" name="user">
-      <input type="password" value="*****" name="pass">
+      <input type="text" value="Username" name="user" onfocus="if (this.value == 'Username') { this.value = '' }" onblur="if (this.value == '') { this.value = 'Username' }">
+      <input type="password" value="*****" name="pass" onfocus="if (this.value == '*****') { this.value = '' }" onblur="if (this.value == '') { this.value = '*****' }">
       <input type="button" value="Submit request" name="login_sub" onclick="submit_login();">
     </form>
   </body>

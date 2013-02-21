@@ -35,6 +35,17 @@ function Session(username, password, socket) {
 }
 
 /**
+ * Various prototypes for any given session.
+ */
+Session.prototype = {
+    join: function(name) {
+	this.room = name;
+	this.socket.join(name);
+	this.socket.broadcast.to(name).emit('chat_append', 'Master Lounge', this.username+' has connected to the '+name+' chat room.');
+    },
+};
+
+/**
  * The exports of this server script. This is what is included in require('loungeserv.js').
  */
 module.exports = {
@@ -64,9 +75,9 @@ module.exports = {
 		    return;// user is already logged in (probably?).
 		}
 		
-		var session = sessions[sock] = new Session(user, pass, sock.join('main'));
-		session.socket.broadcast.to(session.socket.room).emit('chat_append', 'Master Lounge', session.username+ ' is now in the chat lounge.');// Announce to the main channel that 
-		//this user has connected.
+		var session = sessions[sock] = new Session(user, pass, sock);
+		session.join('main');
+		sock.emit('response_login', 0);//0 = successful login, 1 = wrong password, other = ??
 
 		console.log('\nSession info:');
 		console.log(session);
