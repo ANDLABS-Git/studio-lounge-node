@@ -34,6 +34,16 @@ function Session(username, password, socket) {
     this.socket = socket;
 }
 
+function locate(socket) {
+    for (user in sessions) {
+	console.log(user);
+	if (sessions[user].socket == socket) {
+	    return user;
+	}
+    }
+    return null;
+}
+
 /**
  * Various prototypes for any given session.
  */
@@ -41,7 +51,8 @@ Session.prototype = {
     join: function(name) {
 	this.room = name;
 	this.socket.join(name);
-	this.socket.broadcast.to(name).emit('chat_append', 'Master Lounge', this.username+' has connected to the '+name+' chat room.');
+	this.socket.broadcast.to(name).emit('chat_append', 'Master Lounge', this.username+' has connected to the <strong>'+name+'</strong> chat room.');
+	this.socket.emit('chat_append', 'Master Lounge', 'You are now talking in channel: <strong>'+name+'</strong>');
     },
 };
 
@@ -69,28 +80,40 @@ module.exports = {
 	});
 
 	listener.sockets.on('connection', function(sock) {
-
-	    sock.on('provide_login', function(user, pass) {
+	    sock.on('provide_login', function(user) {
 		if (sessions[user] != null) {
+		    sock.emit('response_login', 1);
 		    return;// user is already logged in (probably?).
 		}
-		
-		var session = sessions[sock] = new Session(user, pass, sock);
-		session.join('main');
+		var session = sessions[user] = new Session(user, "password", sock);
 		sock.emit('response_login', 0);//0 = successful login, 1 = wrong password, other = ??
-
+		
+		session.join('main');
 		console.log('\nSession info:');
 		console.log(session);
 	    });
 
+	    sock.on('emit_chatline', function(user, msg) {
+		var session = sessions[user];
+		if (session != null) {
+		    return session.socket.to(session.room).emit('chat_append', session.username, msg);
+		}
+	    });
+
 	    sock.on('disconnect', function() {
-		listener.emit('chat_append', 'Master Lounge', 'User disconnected.');// emit to all connected clients that the user has disconnected.
-		//TODO Add reasoning behind disconnection, as well as print socket name and so on.
+		
+		var user = locate(sock);
+		var session = sessions[user];
+		if (session != null) {
+		    session.socket.broadcast.to(session.room).emit('chat_append', 'Master Lounge', 'User: '+session.username+' disconnected.');// emit to all connected clients that the user has disconnected.
+		    //TODO Add reasoning behind disconnection, as well as print socket name and so on.
 
-		sock.leave(sock.room);
-		delete sessions[sock];
-
-		console.log("Socket disconnected.");
+		    //TODO find a better way to delete sessions[sock] without having to loop through all of the sessions
+		    session.socket.leave(session.room);
+		    delete sessions[user];
+		    
+		    console.log("Socket disconnected.");
+		}
 	    });
 	});
     },

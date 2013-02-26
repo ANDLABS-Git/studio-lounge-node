@@ -1,52 +1,192 @@
-<!DOCTYPE html>
 
-<html>
-  <!--
-      Basic header.
-    -->
-  <head>
-    <title>Andlab Lounge (Debug)</title>
-    <style>
-      p { margin:0; color:blue; }
-      h1 {margin:10; color:red; }
-    </style>
-    <h1><img style="width: 72px; height: 72px;" src="img/andlabs.png"> Andlab Lounge - Web client (debug)<br/></h1>
-  </head>
 
-  <body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
-    <!--
-	Define external javascript inclusions here.
-      -->
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<title>lounge_test</title>
+ 		
+	<style type="text/css" media="screen, projection">
+		@import "inc/style.css";			
+
+	</style>
+</head>
+<body>
+
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-    var socket;
-    function submit_login() {
-	var user = document.forms.login.user.value;
-	var pass = document.forms.login.pass.value;
-	(socket = io.connect()).on("connect", function() {
-            socket.emit("provide_login", user, pass);
+      var socket, user;
+      function submit_login() {
+          (socket = io.connect()).on("connect", function() {
+              user = document.getElementById("input_name").value;
+              document.getElementById("input_name").value = '';
 
-            socket.on("response_login", function(code) {
-		document.forms.login.pass.value = "";
-		if (code == 0) {
-	  	    return alert("Logged in!");
-		}
-		socket.disconnect();
-		return alert("Invalid response code: "+code);
-            });
-	});
-    }
+              socket.emit("provide_login", user);
+              
+              socket.on("response_login", function(code) {// As of for now,
+                  //code will probably ALWAYS be 0.
+                  if (code == 0) {
+                      return alert("Logged in!");
+                  }
+                  socket.disconnect();
+                  return alert("Invalid response code: "+code);
+              });
+              
+              socket.on("chat_append", function(from, msg) {
+                  return append_chatline(from, msg);
+              });
+          });
+      }
+
+      function append_chatline(from, msg) {
+          return document.getElementById("box_cont2").innerHTML = document.getElementById("box_cont2").innerHTML + "<strong>"+from+"</strong>: "+msg+"<br>";
+      }
+      
+      function emit_chatline() {
+          return socket.emit("emit_chatline", user, document.getElementById("chat_text").value);
+      }
     </script>
-    <!--
-	Page content.
-      -->
-    <p><br/>Please log in to access page content.<br/></p>
-    <form id="login" name="login_form">
-      <input type="text" value="Username" name="user" onfocus="if (this.value == 'Username') { this.value = '' }" onblur="if (this.value == '') { this.value = 'Username' }">
-      <input type="password" value="*****" name="pass" onfocus="if (this.value == '*****') { this.value = '' }" onblur="if (this.value == '') { this.value = '*****' }">
-      <input type="button" value="Submit request" name="login_sub" onclick="submit_login();">
-    </form>
-  </body>
+	
+	<div id="wrapper">
+
+	<div id="header"><h1><strong>LOUNGE</strong> // android web debug client v0.2</h1>
+	
+		<div id="login">
+		<form>
+		<input type="text" id="input_name"><input type="button" value="login" onclick="submit_login();">
+		<input type="submit" value="reset">
+		</form>
+
+		</div>
+	</div>
+
+
+	<!-- //BOX1 -->
+	<div id="box">
+	
+	
+		<div id="box_cont" style="background-color: rgb(144, 71, 44);">
+		
+			<ul>
+				
+				<!-- Listelement --> 
+				<li>
+				
+				<a href="">
+					<div id="joinbutton">Join</div>
+				</a>
+				
+				<b>Player Name A</b><br>
+				Gamename
+				</li>
+				<!-- Listelement end--> 
+
+				<!-- Listelement --> 
+				<li>
+				
+				<a href="">
+					<div id="joinbutton">Join</div>
+				</a>
+				
+				<b>Player Name A</b><br>
+				Gamename
+				</li>
+				<!-- Listelement end--> 
+				
+			</ul>
+		
+		</div>
+	
+		<a href="">
+			<div id="box_bottom">Host game</div>
+		</a>
+	
+	</div>
+
+	<!-- //BOX2 -->
+	<div id="box2" style="margin-left: 20px;">
+	
+	
+		<div id="box_cont2" style="background-color: rgb(21, 68, 82);">
+		<strong>Player A:</strong> YoYoYo, what up?<br>
+		<strong>Player B:</strong> Word.<br>
+	
+		</div>
+
+		
+		<div id="box_bottom2">
+		
+			<form>
+			<textarea id="chat_text">Type a message!</textarea>
+			<input type="button" value="send" onclick="emit_chatline();">
+			</form>
+		
+		</div>
+
+	
+	</div>
+	
+	
+
+
+
+
+	<!-- //BOX3 -->
+
+	<div id="box" style="margin-left: 20px;">
+	
+	
+		<div id="box_cont" style="background-color: rgb(21, 95, 64);">
+			<ul>
+				<!-- Listelement --> 
+				<li>
+				GameID: <strong>12345678</strong><br>
+				Game: <strong>thatgamemon!</strong><br>
+				Players: <strong>yo, gangsta, pibbedipit</strong><br>
+				</li>
+				<!-- Listelement end--> 
+			</ul>	
+		</div>
+		
+			<a href="">
+			<div id="box_bottom"> Output / Server Log</div>
+			</a>
+	
+	</div>
+
+		<!-- //BOX2 -->
+	<div id="box" style="margin-left: 20px;">
+	
+	
+		<div id="box_cont" style="background-color: rgb(146, 139, 21);">
+		<strong>Players logged in</strong> 
+		<br>
+		<br> <strong>Playername </strong>(State)
+		<br> <strong>Thomas</strong> (in Lobby)
+		<br> <strong>Ananda </strong>(checked out)
+		<br> <strong>Jamal</strong> (in Gravity Wins)
+	
+		</div>
+
+		
+		<div id="box_bottom">
+		
+		<a href="">
+			<div id="box_bottom">Test Button</div>
+		</a>
+		</div>
+
+
+
+	</div>	
+	
+
+
+	
+	</div>
+
+	
+</body>
 </html>

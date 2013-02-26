@@ -1,0 +1,198 @@
+html { 
+	height:100%; 
+	font-family: vegur;
+} 
+
+
+body {
+	padding: 0px;
+	margin: 0px;
+	font-family: Arial;
+	font-size: 14px;
+	height: 100%;
+	background-color: #000;
+}
+
+a {
+	text-decoration: none;
+	color: inherit;
+}
+
+#wrapper{
+	position: absolute;
+	width: 990px;
+	height: 580px;
+	top: 50%;
+	left: 50%;
+	margin-left: -495px;
+	margin-top: -290px;
+}
+
+
+#header{
+height: 40px;
+border-bottom: 3px solid #fff;
+position: relative;
+margin-bottom: 10px;
+}
+
+#header h1{
+	font-size: 30px;
+	font-weight: normal;
+	color: #fff;
+	margin: 0;
+	padding: 0;
+}
+
+#login input{
+	border: 0px;
+	background-color: #fff;
+	padding: 5px;
+	width: 80px;
+	margin-left: 10px;
+}
+
+#login {
+	position: absolute;
+	top: 5px;
+	right: 0px;
+}
+
+#box{
+	width: 300px;
+	height: 500px;
+	float: left;
+	position: relative;
+
+}
+#box_cont{
+	height: 400px;
+	width: 280px;
+	padding: 10px;
+	overflow-y: auto;
+	overflow-x: hidden;
+
+}
+
+#box2{
+	width: 300px;
+	height: 500px;
+	float: left;
+	position: relative;
+
+}
+#box_cont2{
+	height: 400px;
+	width: 280px;
+	padding: 10px;
+	overflow-y: auto;
+	overflow-x: hidden;
+
+}
+
+#box_bottom2{
+	position: absolute;
+	bottom: 10px;
+	width: 300px;
+	height: 38px;
+	background-color: #fff;
+	text-align: center; 
+	font-size: 20px; 
+	padding-top: 12px;
+	opacity: 0.5; 
+}
+
+#box_bottom2:HOVER{
+	opacity: 1;
+	}
+
+#box_bottom2 textarea{
+	margin-top: -12px;
+	padding: 5px;
+	height: 40px;
+	border: 0;
+	position: absolute;
+	left: 0px;
+	width: 290px;
+	font-family: inherit;
+}
+
+#box_bottom2 input{
+	background-color: #000;
+	border: 0px;
+	position: absolute;
+	right: 0px;
+	bottom: 0px;
+	padding: 3px;
+	color: #fff;
+}
+#box_bottom2 input:HOVER{
+background-color: rgb(21, 68, 82);
+}
+
+#box_bottom{
+	position: absolute;
+	bottom: 10px;
+	width: 300px;
+	height: 38px;
+	background-color: #fff;
+	text-align: center; 
+	font-size: 20px; 
+	padding-top: 12px;
+	opacity: 0.5; 
+}
+
+#box_bottom:HOVER{
+	opacity: 1;
+	}
+
+#box_bottom textarea{
+	margin-top: -12px;
+	padding: 5px;
+	height: 40px;
+	border: 0;
+	position: absolute;
+	left: 0px;
+	width: 290px;
+	font-family: inherit;
+}
+
+#box_bottom input{
+	background-color: #000;
+	border: 0px;
+	position: absolute;
+	right: 0px;
+	bottom: 0px;
+	padding: 3px;
+	color: #fff;
+}
+#box_bottom input:HOVER{
+background-color: rgb(21, 68, 82);
+}
+
+
+#box ul{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+
+#box ul li{
+	border-bottom: 2px dashed #fff;
+	margin-bottom: 15px;
+	padding-bottom: 10px;
+}
+
+
+#joinbutton{
+	background-color: #fff;
+	width: 50px;
+	height: 22px;
+	float: right;
+	text-align: center;
+	padding-top: 8px;
+	opacity: 0.5;
+}
+
+#joinbutton:HOVER{opacity: 1;}
