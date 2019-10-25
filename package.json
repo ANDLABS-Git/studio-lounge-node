@@ -10,7 +10,7 @@
     "test": "./node_modules/mocha/bin/mocha spec --compilers coffee:coffee-script -R spec"
   },
   "dependencies": {
-    "express": "3.0.x",
+    "express": "4.17.x",
     "jade": ">= 0.0.1",
     "coffee-script": "~1.3.3",
     "socket.io-client": "~0.9.10",
